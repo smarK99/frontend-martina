@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"> <!-- data-bs-theme="dark" -->
 <head>
   <meta charset="utf-8">
   <title>MartinaFrontApp</title>
@@ -9,5 +9,482 @@
 </head>
 <body>
   <app-root></app-root>
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--brand-red);">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="#" onclick="navigate('productos')">
+        <span class="logo-dot"></span>
+        <strong>Martina Sandwichs</strong>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div id="mainNav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-2">
+          <li class="nav-item"><a class="nav-link" href="#" data-target="productos" onclick="navigate('productos')"><i class="bi bi-bag"></i> Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-target="pedidos" onclick="navigate('pedidos')"><i class="bi bi-receipt"></i> Pedidos</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-target="stock" onclick="navigate('stock')"><i class="bi bi-box-seam"></i> Stock</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-target="historial" onclick="navigate('historial')"><i class="bi bi-people"></i> Historial</a></li>
+          <li class="nav-item"><a class="nav-link" href="#" data-target="estadisticas" onclick="navigate('estadisticas')"><i class="bi bi-graph-up"></i> Estadísticas</a></li>
+          <li class="nav-item ms-lg-3">
+            <span id="roleBadge" class="role-badge me-2 d-none"></span>
+            <button id="loginBtn" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#loginModal">
+              <i class="bi bi-box-arrow-in-right"></i> Login
+            </button>
+            <button id="logoutBtn" class="btn btn-outline-light btn-sm d-none" onclick="logout()">
+              <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <h1 class="h3 mb-0">Sistema de gestión de stock y pedidos</h1>
+      <p class="mb-0 opacity-75">Fábrica de sándwiches — panel unificado</p>
+    </div>
+  </section>
+
+  <main class="container">
+
+    <!-- SECCIÓN: PRODUCTOS -->
+    <section id="productos" class="section active">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Productos</h2>
+        <div>
+          <input id="searchProd" class="form-control form-control-sm" placeholder="Buscar producto..." oninput="filterProducts(this.value)">
+        </div>
+      </div>
+      <div id="productosGrid" class="row g-3">
+        <!-- Tarjetas mock -->
+        <div class="col-sm-6 col-md-4 col-lg-3 product-item" data-name="Sándwich de Jamón y Queso">
+          <div class="card card-product h-100">
+            <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=1200&auto=format&fit=crop" class="card-img-top" alt="Jamón y Queso">
+            <div class="card-body">
+              <h5 class="card-title">Sándwich de Jamón y Queso</h5>
+              <p class="card-text small text-muted">Clásico con pan de miga, jamón cocido y queso.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">$2.500</span>
+                <button class="btn btn-sm btn-outline-danger">Agregar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-lg-3 product-item" data-name="Sándwich de Pollo">
+          <div class="card card-product h-100">
+            <img src="https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=1200&auto=format&fit=crop" class="card-img-top" alt="Pollo">
+            <div class="card-body">
+              <h5 class="card-title">Sándwich de Pollo</h5>
+              <p class="card-text small text-muted">Pollo desmechado y aderezo de la casa.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">$2.900</span>
+                <button class="btn btn-sm btn-outline-danger">Agregar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-lg-3 product-item" data-name="Sándwich Vegetariano">
+          <div class="card card-product h-100">
+            <img src="https://images.unsplash.com/photo-1509722747041-616f39b57569?q=80&w=1200&auto=format&fit=crop" class="card-img-top" alt="Vegetariano">
+            <div class="card-body">
+              <h5 class="card-title">Sándwich Vegetariano</h5>
+              <p class="card-text small text-muted">Verduras grilladas y queso crema.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">$2.700</span>
+                <button class="btn btn-sm btn-outline-danger">Agregar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-lg-3 product-item" data-name="Sándwich de Atún">
+          <div class="card card-product h-100">
+            <img src="https://images.unsplash.com/photo-1473091534298-04dcbce3278c?q=80&w=1200&auto=format&fit=crop" class="card-img-top" alt="Atún">
+            <div class="card-body">
+              <h5 class="card-title">Sándwich de Atún</h5>
+              <p class="card-text small text-muted">Atún, oliva y toque de limón.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">$2.800</span>
+                <button class="btn btn-sm btn-outline-danger">Agregar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECCIÓN: PEDIDOS -->
+    <section id="pedidos" class="section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Pedidos</h2>
+        <div id="pedidosRoleHint" class="text-muted small"></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th>Total</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="pedidosBody">
+            <!-- filas mock; se filtran según rol -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN: STOCK (solo admin/empleado) -->
+    <section id="stock" class="section">
+      <div class="guard-alert p-3 rounded mb-3 d-none" id="stockGuard">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-shield-lock me-2"></i>
+          <div><strong>Acceso restringido</strong>. Esta sección es solo para admin/empleado.</div>
+        </div>
+      </div>
+
+      <h2 class="h4">Nuevo conteo de stock</h2>
+      <form class="row g-3" onsubmit="event.preventDefault(); alert('Conteo guardado (demo).'); this.reset();">
+        <div class="col-md-6">
+          <label class="form-label">Producto / Insumo</label>
+          <input class="form-control" placeholder="Ej: Sándwich Jamón y Queso">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cantidad</label>
+          <input type="number" class="form-control" placeholder="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ubicación</label>
+          <select class="form-select">
+            <option selected>Cámara de frío</option>
+            <option>Depósito A</option>
+            <option>Depósito B</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Observaciones</label>
+          <textarea class="form-control" rows="2" placeholder="Notas…"></textarea>
+        </div>
+        <div class="col-12">
+          <button class="btn btn-danger"><i class="bi bi-check2-circle"></i> Guardar conteo</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- SECCIÓN: HISTORIAL (solo admin) -->
+    <section id="historial" class="section">
+      <div class="guard-alert p-3 rounded mb-3 d-none" id="historialGuard">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-shield-lock me-2"></i>
+          <div><strong>Acceso restringido</strong>. Esta sección es solo para admin.</div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Historial por cliente</h2>
+        <div class="d-flex gap-2">
+          <select id="clienteSelect" class="form-select form-select-sm">
+            <option value="all" selected>Todos los clientes</option>
+            <option value="1">Juan Pérez</option>
+            <option value="2">María García</option>
+            <option value="3">ACME S.A.</option>
+          </select>
+          <button class="btn btn-sm btn-outline-danger" onclick="filtrarHistorial()">Filtrar</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+          <tr>
+            <th>#</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Items</th>
+            <th>Total</th>
+          </tr>
+          </thead>
+          <tbody id="historialBody">
+            <!-- Mock -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECCIÓN: ESTADÍSTICAS (solo admin) -->
+    <section id="estadisticas" class="section">
+      <div class="guard-alert p-3 rounded mb-3 d-none" id="estadGuard">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-shield-lock me-2"></i>
+          <div><strong>Acceso restringido</strong>. Esta sección es solo para admin.</div>
+        </div>
+      </div>
+
+      <h2 class="h4 mb-3">Estadísticas de ventas</h2>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Producto más vendido</span>
+              <i class="bi bi-trophy"></i>
+            </div>
+            <div class="h5 mt-2">Sándwich de Jamón y Queso</div>
+            <div class="small text-muted">Últimos 30 días</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Ventas del mes</span>
+              <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="h5 mt-2">$ 3.450.000</div>
+            <div class="small text-muted">Actualizado hoy</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Tickets promedio</span>
+              <i class="bi bi-receipt-cutoff"></i>
+            </div>
+            <div class="h5 mt-2">$ 6.200</div>
+            <div class="small text-muted">Últimos 30 días</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-1">
+        <div class="col-lg-6">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Top 3 productos</span>
+              <span class="small text-muted">% participación</span>
+            </div>
+            <div class="mb-2">Jamón y Queso <div class="progress"><div class="progress-bar" style="width: 58%;">58%</div></div></div>
+            <div class="mb-2">Pollo <div class="progress"><div class="progress-bar" style="width: 27%;">27%</div></div></div>
+            <div class="">Vegetariano <div class="progress"><div class="progress-bar" style="width: 15%;">15%</div></div></div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Histórico (últimas 6 semanas)</span>
+              <span class="small text-muted">ventas</span>
+            </div>
+            <!-- mini “chart” css -->
+            <div class="d-flex align-items-end gap-2" style="height: 120px;">
+              <div class="bg-danger-subtle flex-grow-1" style="height: 40%;"></div>
+              <div class="bg-danger-subtle flex-grow-1" style="height: 65%;"></div>
+              <div class="bg-danger-subtle flex-grow-1" style="height: 55%;"></div>
+              <div class="bg-danger-subtle flex-grow-1" style="height: 80%;"></div>
+              <div class="bg-danger-subtle flex-grow-1" style="height: 50%;"></div>
+              <div class="bg-danger-subtle flex-grow-1" style="height: 90%;"></div>
+            </div>
+            <div class="d-flex justify-content-between small text-muted mt-1">
+              <span>S1</span><span>S2</span><span>S3</span><span>S4</span><span>S5</span><span>S6</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL LOGIN -->
+  <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content" onsubmit="event.preventDefault(); doLogin();">
+        <div class="modal-header">
+          <h5 class="modal-title">Login</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Simulación simple de credenciales -->
+          <div class="mb-3">
+            <label class="form-label">Usuario (demo)</label>
+            <input id="loginUser" class="form-control" placeholder="admin / cliente / empleado" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Rol</label>
+            <select id="loginRole" class="form-select" required>
+              <option value="admin">Admin</option>
+              <option value="cliente">Cliente</option>
+              <option value="empleado">Empleado</option>
+            </select>
+          </div>
+          <div class="small text-muted">* Este login es solo de demostración (sin backend).</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" type="submit"><i class="bi bi-box-arrow-in-right"></i> Ingresar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // --------- Estado y helpers de navegación / auth ----------
+    const sections = ['productos','pedidos','stock','historial','estadisticas'];
+    function navigate(id) {
+      sections.forEach(s => {
+        document.getElementById(s).classList.toggle('active', s === id);
+        document.querySelectorAll('.nav-link').forEach(a => {
+          const target = a.getAttribute('data-target');
+          if (target) a.classList.toggle('active', target === id);
+        });
+      });
+      applyRoleGuards();
+      if (id === 'pedidos') renderPedidos();
+      if (id === 'historial') renderHistorial();
+    }
+
+    function getRole() {
+      return localStorage.getItem('role'); // 'admin' | 'cliente' | 'empleado' | null
+    }
+    function setRole(role, user) {
+      localStorage.setItem('role', role);
+      localStorage.setItem('user', user || role);
+      applyRoleGuards();
+    }
+    function logout() {
+      localStorage.removeItem('role');
+      localStorage.removeItem('user');
+      applyRoleGuards();
+      navigate('productos');
+    }
+
+    function applyRoleGuards() {
+      const role = getRole();
+      const roleBadge = document.getElementById('roleBadge');
+      const loginBtn = document.getElementById('loginBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      // mostrar rol
+      if (role) {
+        roleBadge.textContent = `Rol: ${role}`;
+        roleBadge.classList.remove('d-none');
+        loginBtn.classList.add('d-none');
+        logoutBtn.classList.remove('d-none');
+      } else {
+        roleBadge.classList.add('d-none');
+        loginBtn.classList.remove('d-none');
+        logoutBtn.classList.add('d-none');
+      }
+
+      // guards visuales por sección
+      const stockGuard = document.getElementById('stockGuard');
+      const historialGuard = document.getElementById('historialGuard');
+      const estadGuard = document.getElementById('estadGuard');
+
+      const canStock = role === 'admin' || role === 'empleado';
+      const isAdmin = role === 'admin';
+
+      // si no tiene permiso, mostrar alerta guard
+      stockGuard.classList.toggle('d-none', canStock);
+      historialGuard.classList.toggle('d-none', isAdmin);
+      estadGuard.classList.toggle('d-none', isAdmin);
+    }
+
+    function doLogin() {
+      const user = document.getElementById('loginUser').value.trim();
+      const role = document.getElementById('loginRole').value;
+      setRole(role, user);
+      const modalEl = document.getElementById('loginModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+      // por defecto, si cliente entra a pedidos
+      if (role === 'cliente') navigate('pedidos');
+      else navigate('productos');
+    }
+
+    // --------- Productos: filtro simple ----------
+    function filterProducts(q) {
+      const query = (q || '').toLowerCase();
+      document.querySelectorAll('.product-item').forEach(card => {
+        const name = card.getAttribute('data-name').toLowerCase();
+        card.style.display = name.includes(query) ? '' : 'none';
+      });
+    }
+
+    // --------- Mock de datos (reemplazar por API real) ----------
+    const MOCK_PEDIDOS = [
+      { id: 101, fecha: '2025-08-20', clienteId: 1, clienteNombre: 'Juan Pérez', total: 8200, estado: 'ENTREGADO' },
+      { id: 102, fecha: '2025-08-21', clienteId: 2, clienteNombre: 'María García', total: 5200, estado: 'EN PREPARACIÓN' },
+      { id: 103, fecha: '2025-08-21', clienteId: 3, clienteNombre: 'ACME S.A.', total: 21400, estado: 'ENVIADO' },
+      { id: 104, fecha: '2025-08-22', clienteId: 1, clienteNombre: 'Juan Pérez', total: 9900, estado: 'ENTREGADO' },
+    ];
+    const CURRENT_CLIENT_ID = 1; // Simulación "cliente logueado"
+
+    function renderPedidos() {
+      const role = getRole();
+      const tbody = document.getElementById('pedidosBody');
+      const hint = document.getElementById('pedidosRoleHint');
+      tbody.innerHTML = '';
+      let rows = MOCK_PEDIDOS;
+
+      if (role === 'cliente') {
+        hint.textContent = 'Viendo tus últimos pedidos';
+        rows = rows.filter(p => p.clienteId === CURRENT_CLIENT_ID);
+      } else if (role === 'admin') {
+        hint.textContent = 'Viendo los últimos pedidos (todos los clientes)';
+      } else if (role === 'empleado') {
+        hint.textContent = 'Viendo últimos pedidos (vista interna)';
+      } else {
+        hint.textContent = 'Inicia sesión para ver pedidos';
+      }
+
+      rows.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${new Date(p.fecha).toLocaleDateString()}</td>
+          <td>${p.clienteNombre}</td>
+          <td>$ ${p.total.toLocaleString('es-AR')}</td>
+          <td><span class="badge text-bg-${p.estado==='ENTREGADO' ? 'success':'secondary'}">${p.estado}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderHistorial() {
+      const role = getRole();
+      const tbody = document.getElementById('historialBody');
+      tbody.innerHTML = '';
+      if (role !== 'admin') return;
+      const sel = document.getElementById('clienteSelect').value;
+      const rows = MOCK_PEDIDOS.filter(p => sel === 'all' ? true : p.clienteId === +sel);
+      rows.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td>${new Date(p.fecha).toLocaleDateString()}</td>
+          <td>${p.clienteNombre}</td>
+          <td>—</td>
+          <td>$ ${p.total.toLocaleString('es-AR')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    function filtrarHistorial() { renderHistorial(); }
+
+    // --------- Inicio ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      applyRoleGuards();
+      renderPedidos();
+      renderHistorial();
+    });
+  </script>
 </body>
 </html>
