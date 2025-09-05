@@ -1,0 +1,60 @@
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#d81b27;">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" [routerLink]="['/productos']">
+            <span class="logo-dot me-2"></span>
+            <strong>FábricaSandwich</strong>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="mainNav" class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-2">
+                <li class="nav-item">
+                    <a routerLink="/productos" routerLinkActive="active" class="nav-link">
+                        <i class="bi bi-bag"></i> Productos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a routerLink="/pedidos" routerLinkActive="active" class="nav-link">
+                        <i class="bi bi-receipt"></i> Pedidos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a routerLink="/stock" routerLinkActive="active" class="nav-link">
+                        <i class="bi bi-box-seam"></i> Stock
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a routerLink="/historial" routerLinkActive="active" class="nav-link">
+                        <i class="bi bi-people"></i> Historial
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a routerLink="/estadisticas" routerLinkActive="active" class="nav-link">
+                        <i class="bi bi-graph-up"></i> Estadísticas
+                    </a>
+                </li>
+
+                <li class="nav-item ms-lg-3 d-flex align-items-center">
+                    @if (role$ | async; as role) {
+                    <span class="role-badge me-2">
+                        Rol: {{ role }}
+                    </span>
+                    }
+                    @if (!(isLoggedIn$ | async)) {
+                    <button class="btn btn-light btn-sm" (click)="goLogin()">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </button>
+                    } @else {
+                    <button class="btn btn-outline-light btn-sm" (click)="logout()">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                    }
+                </li>        
+
+            </ul>
+        </div>
+    </div>
+</nav>
