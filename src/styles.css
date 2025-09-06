@@ -3,58 +3,74 @@
 @import "bootstrap-icons/font/bootstrap-icons.css";
 
 :root {
-      --brand-red: #d81b27; /* rojo marca */
-      --brand-red-dark: #b11620;
-      --brand-white: #ffffff;
-      --brand-gray: #f7f7f7;
-    }
-    body {
-      background: var(--brand-gray);
-    }
-    .navbar-brand .logo-dot {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: var(--brand-white); display: inline-block; margin-right: .5rem;
-      box-shadow: inset 0 0 0 4px var(--brand-red);
-    }
-    .hero {
-      background: linear-gradient(135deg, var(--brand-red), var(--brand-red-dark));
-      color: var(--brand-white);
-      padding: 2rem 0;
-    }
-    .nav-link.active {
-      font-weight: 600;
-      color: var(--brand-red) !important;
-      background: #fff; border-radius: .5rem;
-    }
-    .section {
-      display: none; /* se controla por JS */
-      padding: 1.5rem 0;
-    }
-    .section.active {
-      display: block;
-    }
-    .card-product:hover {
-      transform: translateY(-2px);
-      transition: .2s ease;
-      box-shadow: 0 0.5rem 1rem rgba(0,0,0,.08);
-    }
-    .role-badge {
-      font-size: .85rem;
-      background: #fff; color: var(--brand-red);
-      border: 1px solid #fff; border-radius: 999px; padding: .25rem .6rem;
-    }
-    .stat-card {
-      background: #fff; border: 1px solid #eee; border-radius: .75rem;
-      padding: 1rem;
-    }
-    .progress-bar {
-      background-color: var(--brand-red);
-    }
-    .table thead th {
-      background: #fafafa;
-    }
-    .guard-alert {
-      border-left: 4px solid var(--brand-red);
-      background: #fff;
-    }
-    .cursor-pointer { cursor: pointer; }
+  --brand-red: #d81b27; /* rojo marca */
+  --brand-red-dark: #b11620;
+  --brand-white: #ffffff;
+  --brand-gray: #f7f7f7;
+}
+body {
+  background: var(--brand-gray);
+}
+.navbar-brand .logo-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand-white);
+  display: inline-block;
+  margin-right: 0.5rem;
+  box-shadow: inset 0 0 0 4px var(--brand-red);
+}
+.hero {
+  background: linear-gradient(135deg, var(--brand-red), var(--brand-red-dark));
+  color: var(--brand-white);
+  padding: 2rem 0;
+}
+.nav-link.active {
+  font-weight: 600;
+  color: var(--brand-red) !important;
+  background: #fff;
+  border-radius: 0.5rem;
+}
+.section {
+  display: none; /* se controla por JS */
+  padding: 1.5rem 0;
+}
+.section.active {
+  display: block;
+}
+.card-product:hover {
+  transform: translateY(-2px);
+  transition: 0.2s ease;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+}
+.role-badge {
+  font-size: 0.85rem;
+  background: #fff;
+  color: var(--brand-red);
+  border: 1px solid #fff;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+}
+.stat-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+.progress-bar {
+  background-color: var(--brand-red);
+}
+.table thead th {
+  background: #fafafa;
+}
+.guard-alert {
+  border-left: 4px solid var(--brand-red);
+  background: #fff;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+.bg-brand {
+  background: linear-gradient(90deg, var(--brand-red), var(--brand-red-dark));
+  color: var(--brand-white);
+}

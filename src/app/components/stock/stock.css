@@ -1,0 +1,19 @@
+/* Header rojo del modal */
+.modal-header-red {
+  background: linear-gradient(90deg, var(--brand-red), var(--brand-red-dark));
+  color: var(--brand-white);
+  border-top-left-radius: .375rem;
+  border-top-right-radius: .375rem;
+}
+
+/* Guard alert similar a la que hemos usado */
+.guard-alert {
+  border-left: 4px solid var(--brand-red);
+  background: #fff;
+  padding: 1rem;
+}
+
+/* Table tweaks */
+.table thead th {
+  background: #fafafa;
+}

@@ -1,0 +1,71 @@
+<section class="py-4">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="h4 mb-0">Pedidos</h2>
+
+      <!-- <div class="d-flex gap-2 align-items-center">
+        <input type="search" class="form-control form-control-sm" placeholder="Buscar por cliente, id o estado..."
+          (input)="onFilterChange($any($event.target).value)" style="min-width: 220px;" />
+        <button class="btn btn-sm btn-outline-secondary" (click)="onFilterChange('')">Limpiar</button>
+      </div> -->
+
+      @if (role$ | async; as role) {
+      <div class="text-muted small">
+        @if (role === 'admin') {
+        Viendo los últimos pedidos (admin)
+        } @else if (role === 'cliente') {
+        Viendo tus últimos pedidos
+        } @else {
+        Vista interna
+        }
+      </div>
+      } @else {
+      <div class="text-muted small">Inicia sesión para ver pedidos</div>
+      }
+    </div>
+
+    <!-- Tabla de pedidos -->
+    @if (visiblePedidos$ | async; as pedidos) {
+    @if (pedidos$ === null) {
+    <div class="alert alert-info">No hay pedidos para mostrar.</div>
+    } @else {
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Total</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of pedidos; track p.id) {
+          <tr>
+            <td>{{ p.id }}</td>
+            <td>{{ toShortDate(p.fecha) }}</td>
+            <td>{{ p.clienteNombre }}</td>
+            <td>{{ p.total | currency:'ARS' }}</td>
+            <td>
+              <span class="badge" [ngClass]="{
+                      'bg-success': p.estado==='ENTREGADO',
+                      'bg-warning text-dark': p.estado==='EN PREPARACIÓN' || p.estado==='ENVIADO',
+                      'bg-secondary': p.estado!=='ENTREGADO' && p.estado!=='EN PREPARACIÓN'
+                    }">{{ p.estado }}</span>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary me-1" (click)="verDetalles(p.id)">Ver</button>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+    } @else {
+    <div> Cargando pedidos… </div>
+    }
+  </div>
+</section>
