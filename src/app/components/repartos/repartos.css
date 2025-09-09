@@ -1,0 +1,21 @@
+.modal-header-red {
+  background: linear-gradient(90deg, var(--brand-red), var(--brand-red-dark));
+  color: var(--brand-white);
+}
+.fab {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #e9ecef;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  border: none;
+  z-index: 1050;
+}
+.table thead th { background: #fafafa; }

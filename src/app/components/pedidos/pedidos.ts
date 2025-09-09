@@ -17,9 +17,10 @@ export class Pedidos {
   private pedidoService = inject(PedidoService);
   private auth = inject(AuthService);
 
-  //Filtro de busqueda
-  // private filterSubject = new BehaviorSubject<string>(''); // texto del filtro
-  // filter$ = this.filterSubject.asObservable();
+  // Filtro de búsqueda (puedes poner debounceTime si querés)
+  private filterSubject = new BehaviorSubject<string>(''); // texto del filtro
+  // Si querés debounce: this.filterSubject.pipe(debounceTime(200))
+  filter$ = this.filterSubject.asObservable();
 
   // Observables del auth
   role$ = this.auth.role$;           // Observable<string | null>
@@ -37,45 +38,44 @@ export class Pedidos {
   constructor() {
     this.pedidos$ = this.pedidoService.getAll();
 
-    // Combina la lista de pedidos con el rol, y calcula qué mostrar
-    this.visiblePedidos$ = combineLatest([this.pedidos$, this.role$ /*, this.filter$*/]).pipe(
-      map(([pedidos, role/*, filter*/]) => {
-        // const q = (filter || '').trim().toLowerCase();
-        // let list = pedidos.slice();
+    // Combina la lista de pedidos con el rol y el filtro, y calcula qué mostrar
+    this.visiblePedidos$ = combineLatest([this.pedidos$, this.role$, this.filter$]).pipe(
+      map(([pedidos, role, filter]) => {
+        const q = (filter || '').trim().toLowerCase();
 
+        // 1) Determinar la lista base según rol
+        let list: Pedido[] = [];
         if (!role) {
-          // No logueado -> devolver vacío (o podrías devolver un subset público)
+          // No logueado -> lista vacía
           return [];
-        }
-        if (role === 'admin') {
-          return pedidos.slice().sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha)); // últimos primero
-        }
-        if (role === 'cliente') {
-          return pedidos
-            .filter(p => p.clienteId === this.CURRENT_CLIENT_ID)
-            .sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha));
+        } else if (role === 'admin') {
+          list = pedidos.slice(); // todos
+        } else if (role === 'cliente') {
+          list = pedidos.filter(p => p.clienteId === this.CURRENT_CLIENT_ID);
+        } else {
+          // empleado u otros roles -> mostramos todos (o ajustar según reglas)
+          list = pedidos.slice();
         }
 
-        // filtro por texto en el nombre del cliente (si hay query)
-        // if (q) {
-        //   list = list.filter(p =>
-        //     (p.clienteNombre || '').toLowerCase().includes(q) ||
-        //     p.id.toString().includes(q) ||
-        //     (p.estado || '').toLowerCase().includes(q)
-        //   );
-        // }
+        // 2) Aplicar filtro de texto si corresponde
+        if (q) {
+          list = list.filter(p =>
+            (p.clienteNombre || '').toLowerCase().includes(q) ||
+            p.id.toString().includes(q) ||
+            (p.estado || '').toLowerCase().includes(q)
+          );
+        }
 
-
-        // empleado u otros roles -> mostrar todos pero sin datos sensibles (a criterio)
-        return pedidos.slice().sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha));
+        // 3) ordenar por fecha descendente y devolver
+        return list.sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha));
       })
     );
   }
 
   // Método público llamado desde template:
-  // onFilterChange(value: string) {
-  //   this.filterSubject.next(value ?? '');
-  // }
+  onFilterChange(value: string) {
+    this.filterSubject.next(value ?? '');
+  }
 
   // Helper: formatea fecha en template si querés usar aquí
   toShortDate(fechaIso: string) {
@@ -85,7 +85,6 @@ export class Pedidos {
 
   // Acción de ejemplo: ver detalles / navegar
   verDetalles(id: number) {
-    // this.router.navigate(['/pedidos', id]); // si tenés ruta configurada
     console.log('Ver detalles pedido', id);
   }
 }

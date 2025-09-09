@@ -1,1 +1,121 @@
-<p>estadisticas works!</p>
+<section class="py-4">
+    <div class="container">
+        @if (role$ | async; as role) {
+        @if (role === 'admin') {
+
+        <!-- KPI row -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="card p-3 stat-card">
+                    <div class="small text-muted"><i class="bi bi-bar-chart"></i> Ventas últimos 30 días</div>
+                    <div class="h5 fw-bold"> {{ ventasUltimos30Dias | currency:'ARS' }} </div>
+                    <div class="small text-muted">Pedidos: {{ pedidosUltimos30Dias }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 stat-card">
+                    <div class="small text-muted"><i class="bi bi-cash-stack"></i> Ventas últimos 7 días</div>
+                    <div class="h5 fw-bold"> {{ ventasUltimos7Dias | currency:'ARS' }} </div>
+                    <div class="small text-muted">Ticket promedio: {{ ticketPromedio30Dias | currency:'ARS' }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 stat-card">
+                    <div class="small text-muted"> <i class="bi bi-trophy"></i> Producto más vendido (30d)</div>
+                    <div class="h6 fw-bold mt-1"> {{ topProductos30Dias.length ? topProductos30Dias[0].nombre : '—' }} </div>
+                    <div class="small text-muted">Unidades: {{ topProductos30Dias.length ? topProductos30Dias[0].cantidad : 0  }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 stat-card">
+                    <div class="small text-muted"> <i class="bi bi-receipt-cutoff"></i> Top 3 — total</div>
+                    <div class="h5 fw-bold">
+                        {{ top3Total | currency:'ARS' }}
+                    </div>
+                    <div class="small text-muted">Productos distinguidos</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><strong> <i class="bi bi-graph-up-arrow"></i> Ventas por semana (últimas 6 semanas)</strong></div>
+                        <div class="small text-muted">Montos en ARS</div>
+                    </div>
+                    <div style="height:320px;">
+                        <canvas baseChart [data]="lineSalesData" [options]="lineSalesOptions" [type]="'line'">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><strong><i class="bi bi-bar-chart"></i> Top productos (cantidad)</strong></div>
+                        <div class="small text-muted">Últimos 30 días</div>
+                    </div>
+                    <div style="height:220px;">
+                        <canvas baseChart [data]="barTopProductsData" [options]="barTopProductsOptions" chartType="bar">
+                        </canvas>
+                    </div>
+                </div>
+
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><strong> <i class="bi bi-bar-chart"></i> Participación por producto</strong></div>
+                        <div class="small text-muted">Últimos 30 días</div>
+                    </div>
+                    <div style="height:220px;">
+                        <canvas baseChart [data]="doughnutData" [options]="doughnutOptions" chartType="doughnut">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top3 table -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><strong> <i class="bi bi-bar-chart-steps"></i> Top 10 productos (últimos 30 días)</strong></div>
+                        <div class="small text-muted">Ordenado por cantidad</div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Producto</th>
+                                    <th class="text-end">Unidades</th>
+                                    <th class="text-end">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (p of topProductsForDisplay; track p.nombre) {
+                                <tr>
+                                    <td>{{ p.rank }}</td>
+                                    <td>{{ p.nombre }}</td>
+                                    <td class="text-end">{{ p.cantidad }}</td>
+                                    <td class="text-end">{{ p.monto | currency:'ARS' }}</td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        } @else {
+        <div class="alert guard-alert">Acceso restringido: estadísticas solo para Admin.</div>
+        }
+        } @else {
+        <div class="alert guard-alert">Inicia sesión con cuenta de admin para ver estadísticas.</div>
+        }
+    </div>
+</section>

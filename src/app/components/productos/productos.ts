@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ProductoService } from '../../services/producto-service';
+import { Observable } from 'rxjs';
 
 interface Producto {
   id: number;
@@ -39,6 +41,28 @@ export class Productos {
       imagen: 'assets/img/vegetariano.jpg'
     }
   ];
+
+  // private productoService = inject(ProductoService);
+
+  // productos$!: Observable<Producto[]>;
+  // loading = false;
+  // error: string | null = null;
+
+  // ngOnInit() {
+  //   this.loadAll();
+  // }
+
+  // loadAll() {
+  //   this.loading = true;
+  //   this.error = null;
+  //   this.productos$ = this.productoService.getAll(); // observable listo para async pipe
+  //   // si querés manejar loading/error con suscripción:
+  //   // this.productoService.getAll().subscribe({
+  //   //   next: list => { this.productos = list; this.loading = false; },
+  //   //   error: err => { this.error = 'Error al cargar'; this.loading = false; }
+  //   // });
+  // }
+
 
   agregarAlCarrito(producto: Producto) {
     console.log('Agregado al carrito:', producto);

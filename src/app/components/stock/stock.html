@@ -2,6 +2,15 @@
   <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2 class="h4 mb-0">Conteos de Stock</h2>
+
+
+      <!-- FILTRO por empleado o producto -->
+      <div class="d-flex gap-2 align-items-center">
+        <input type="search" class="form-control form-control-sm" placeholder="Buscar por empleado, producto o id..."
+          (input)="onStockFilterChange($any($event.target).value)" style="min-width: 240px;" />
+        <button class="btn btn-sm btn-outline-secondary" (click)="onStockFilterChange('')">Buscar</button>
+      </div>
+
       <div>
         <button class="btn btn-outline-secondary btn-sm" (click)="crearNuevoConteo()" title="Crear nuevo conteo">
           <i class="bi bi-plus-lg"></i> Nuevo conteo
@@ -10,57 +19,55 @@
     </div>
 
     @if (role$ | async; as role) {
-      @if (role === 'admin' || role === 'empleado') {
-        @if (visibleCounts$ | async; as counts) {
-          @if (counts.length === 0) {
-            <div class="alert alert-info">No hay conteos para mostrar.</div>
-          } @else {
-            <div class="table-responsive">
-              <table class="table table-striped align-middle">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Fecha / Hora</th>
-                    <th>Empleado</th>
-                    <th>Items contados</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (c of counts; track c.id) {
-                    <tr>
-                      <td>{{ c.id }}</td>
-                      <td>{{ c.fechaHora | date:'short' }}</td>
-                      <td>{{ c.empleadoNombre }}</td>
-                      <td>{{ c.items.length }}</td>
-                      <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary" (click)="openDetailsModal(detailModal, c)">
-                          Ver
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-        } @else {
-          <div>Cargando conteos…</div>
-        }
-      } @else {
-        <div class="alert guard-alert p-3">
-          <strong>Acceso restringido:</strong> Esta sección solo es accesible por admin o empleados.
-        </div>
-      }
+    @if (role === 'admin' || role === 'empleado') {
+    @if (visibleCounts$ | async; as counts) {
+    @if (counts.length === 0) {
+    <div class="alert alert-info">No hay conteos para mostrar.</div>
     } @else {
-      <div class="alert alert-secondary">Inicia sesión para ver los conteos de stock.</div>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fecha / Hora</th>
+            <th>Empleado</th>
+            <th>Items contados</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of counts; track c.id) {
+          <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.fechaHora | date:'short' }}</td>
+            <td>{{ c.empleadoNombre }}</td>
+            <td>{{ c.items.length }}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary" (click)="openDetailsModal(detailModal, c)">
+                Ver
+              </button>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
     }
-  </div>
-
-  
-  <!-- <button class="fab btn" title="Nuevo conteo" (click)="crearNuevoConteo()">
+    } @else {
+    <div>Cargando conteos…</div>
+    }
+    } @else {
+    <div class="alert guard-alert p-3">
+      <strong>Acceso restringido:</strong> Esta sección solo es accesible por admin o empleados.
+    </div>
+    }
+    } @else {
+    <div class="alert alert-secondary">Inicia sesión para ver los conteos de stock.</div>
+    }
+    <!-- <button class="fab btn" title="Nuevo conteo" (click)="crearNuevoConteo()">
     <i class="bi bi-plus-lg"></i>
   </button> -->
+  </div>
 </section>
 
 <!-- Modal: detalle de conteo -->
@@ -72,45 +79,45 @@
 
   <div class="modal-body">
     @if (selectedCount; as sc) {
-      <!-- Tabla con estilo similar a la imagen -->
-      <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
-          <thead class="table-danger">
-            <tr>
-              <th class="text-center">Cant.</th>
-              <th>Producto</th>
-              <th class="text-end">Precio Unit.</th>
-              <th class="text-end">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (it of sc.items; track it.id) {
-              <tr>
-                <td class="text-center">{{ it.cantidadContada }}</td>
-                <td>{{ it.nombre }}</td>
-                <td class="text-end">{{ it.precioUnitario }}</td>
-                <td class="text-end">
-                  {{ it.cantidadContada * it.precioUnitario }}
-                </td>
-              </tr>
-            }
-          </tbody>
+    <!-- Tabla con estilo similar a la imagen -->
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped align-middle">
+        <thead class="table-danger">
+          <tr>
+            <th class="text-center">Cant.</th>
+            <th>Producto</th>
+            <th class="text-end">Precio Unit.</th>
+            <th class="text-end">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (it of sc.items; track it.id) {
+          <tr>
+            <td class="text-center">{{ it.cantidadContada }}</td>
+            <td>{{ it.nombre }}</td>
+            <td class="text-end">{{ it.precioUnitario }}</td>
+            <td class="text-end">
+              {{ it.cantidadContada * it.precioUnitario }}
+            </td>
+          </tr>
+          }
+        </tbody>
 
-          <!-- Fila total: si no tenés precios, mostrará 0 o '-' según lo calculado -->
-          <tfoot class="table-danger">
-            <tr class="total-row">
-              <td colspan="2" class="text-center fw-bold">VALOR TOTAL STOCK</td>
-              <td class="text-end"></td>
-              <td class="text-end fw-bold">
-                <!-- Si querés calcular un total real, implementá totalValue() en el TS -->
-                {{ totalValue() === 0 ? '$ 0' : ('$' + totalValue()) }}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+        <!-- Fila total: si no tenés precios, mostrará 0 o '-' según lo calculado -->
+        <tfoot class="table-danger">
+          <tr class="total-row">
+            <td colspan="2" class="text-center fw-bold">VALOR TOTAL STOCK</td>
+            <td class="text-end"></td>
+            <td class="text-end fw-bold">
+              <!-- Si querés calcular un total real, implementá totalValue() en el TS -->
+              {{ totalValue() === 0 ? '$ 0' : ('$' + totalValue()) }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
     } @else {
-      <p>No hay detalles seleccionados.</p>
+    <p>No hay detalles seleccionados.</p>
     }
   </div>
 
@@ -118,6 +125,3 @@
     <button class="btn btn-danger" (click)="modal.close()">Cerrar</button>
   </div>
 </ng-template>
-
-
-

@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService } from '../../services/auth-service';
-import { Observable, combineLatest, map } from 'rxjs'
+import { Observable, combineLatest, map, BehaviorSubject } from 'rxjs'
 import { ConteoStockService } from '../../services/conteo-stock-service';
 import { StockCount } from '../../services/conteo-stock-service';
 
@@ -13,7 +13,6 @@ import { StockCount } from '../../services/conteo-stock-service';
   styleUrl: './stock.css'
 })
 export class Stock {
-
   private stockService = inject(ConteoStockService);
   private modalService = inject(NgbModal);
   private auth = inject(AuthService);
@@ -23,21 +22,44 @@ export class Stock {
   counts$!: Observable<StockCount[]>;
   visibleCounts$!: Observable<StockCount[]>;
 
+  // filtro reactivo
+  private stockFilterSubject = new BehaviorSubject<string>(''); 
+  stockFilter$ = this.stockFilterSubject.asObservable();
+
   // seleccionado para el modal
   selectedCount: StockCount | null = null;
 
   constructor() {
     this.counts$ = this.stockService.getAllCounts();
 
-    // Solo mostrar datos a admin / empleado, si no devolver vacío
-    this.visibleCounts$ = combineLatest([this.counts$, this.role$]).pipe(
-      map(([counts, role]) => {
-        if (role === 'admin' || role === 'empleado') {
-          return counts.slice().sort((a, b) => +new Date(b.fechaHora) - +new Date(a.fechaHora));
+    // Combina counts, role y filtro
+    this.visibleCounts$ = combineLatest([this.counts$, this.role$, this.stockFilter$]).pipe(
+      map(([counts, role, filter]) => {
+        const q = (filter || '').trim().toLowerCase();
+
+        // Si no tiene rol o no es admin/empleado, devolver vacío
+        if (!(role === 'admin' || role === 'empleado')) return [];
+
+        // lista base (todos los conteos) ordenada por fecha
+        let list = counts.slice();
+
+        // Si hay query, filtramos por empleadoNombre, id o productos dentro de items
+        if (q) {
+          list = list.filter(c =>
+            (c.empleadoNombre || '').toLowerCase().includes(q) ||
+            c.id.toString().includes(q) ||
+            c.items.some(it => (it.nombre || '').toLowerCase().includes(q))
+          );
         }
-        return [];
+
+        return list.sort((a, b) => +new Date(b.fechaHora) - +new Date(a.fechaHora));
       })
     );
+  }
+
+  // llamado desde el template
+  onStockFilterChange(value: string) {
+    this.stockFilterSubject.next(value ?? '');
   }
 
   openDetailsModal(content: any, count: StockCount) {
@@ -47,7 +69,6 @@ export class Stock {
 
   // Botón flotante - crear nuevo (sin funcionalidad por ahora)
   crearNuevoConteo() {
-    // Por ahora solo log; en el futuro abrir formulario
     console.log('Crear nuevo conteo (pendiente).');
   }
 
@@ -57,16 +78,12 @@ export class Stock {
     return s.padStart(width, '0');
   }
 
-  // Calcula total del conteo (suma cantidad * precio si existiera precio; 
-  // en tu mock no hay precio, pero dejo ejemplo por si lo querés usar)
   totalValue(): number {
-    if (!this.selectedCount || !this.selectedCount.items ) return 0;
-    // Si tus items tienen precioUnitario usa: return selectedCount.items.reduce(...)
-    
+    if (!this.selectedCount || !this.selectedCount.items) return 0;
     return this.selectedCount.items.reduce((total, item) => {
-    const subtotal = item.precioUnitario * item.cantidadContada;
-    return total + subtotal;
-  }, 0);
+      const precio = (item as any).precioUnitario ?? 0;
+      const subtotal = precio * (item.cantidadContada ?? 0);
+      return total + subtotal;
+    }, 0);
   }
-
 }

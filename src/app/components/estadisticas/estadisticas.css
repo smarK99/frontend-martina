@@ -1,0 +1,24 @@
+.stat-card {
+  background: #fff;
+  border-radius: .5rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+  padding: 1rem;
+}
+.card p, .card .small { margin: 0; }
+
+:root {
+  --brand-red: #d81b27;
+  --brand-red-dark: #b11620;
+  --brand-white: #ffffff;
+}
+
+.guard-alert {
+  border-left: 4px solid var(--brand-red);
+  background: #fff;
+  padding: 1rem;
+}
+
+/* Reduce height for charts on small screens */
+@media (max-width: 768px) {
+  .card > div[style] { height: 220px !important; }
+}

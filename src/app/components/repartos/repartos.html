@@ -1,0 +1,127 @@
+<section class="py-4">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="h4 mb-0">Repartos</h2>
+
+      <div class="d-flex gap-2 align-items-center">
+        <input
+          type="search"
+          class="form-control form-control-sm"
+          placeholder="Buscar por repartidor, cliente o id..."
+          (input)="onFilterChange($any($event.target).value)"
+          style="min-width: 260px;"
+        />
+        <button class="btn btn-sm btn-outline-secondary" (click)="onFilterChange('')">Buscar</button>
+      </div>
+    </div>
+
+    @if (role$ | async; as role) {
+      @if (visibleRepartos$ | async; as repartos) {
+        @if (repartos.length === 0) {
+          <div class="alert alert-info">No hay repartos para mostrar.</div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Inicio</th>
+                  <th>Repartidor</th>
+                  <th>Estado</th>
+                  <th>Pedidos</th>
+                  <th>Total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of repartos; track r.id) {
+                  <tr>
+                    <td>{{ r.id }}</td>
+                    <td>{{ r.fechaHoraInicio | date:'short' }}</td>
+                    <td>{{ r.repartidorNombre }}</td>
+                    <td>
+                      <span class="badge"
+                        [ngClass]="{
+                          'bg-secondary': r.estado === 'PENDIENTE',
+                          'bg-warning text-dark': r.estado === 'EN_CURSO',
+                          'bg-success': r.estado === 'FINALIZADO'
+                        }">{{ r.estado }}</span>
+                    </td>
+                    <td>{{ r.pedidos.length }}</td>
+                    <td>{{ totalReparto(r) | currency:'ARS' }}</td>
+                    <td class="text-end">
+                      <button class="btn btn-sm btn-outline-primary" (click)="openDetailsModal(detailModal, r)">Ver</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      } @else {
+        <div>Cargando repartos…</div>
+      }
+    } @else {
+      <div class="alert alert-secondary">Inicia sesión para ver repartos.</div>
+    }
+
+    <!-- FAB -->
+    <button class="fab btn" title="Nuevo reparto" (click)="crearNuevoReparto()">
+      <i class="bi bi-truck"></i>
+    </button>
+  </div>
+</section>
+
+<!-- Modal detalle reparto -->
+<ng-template #detailModal let-modal>
+  <div class="modal-header modal-header-red">
+    <h5 class="modal-title">Reparto #{{ selectedReparto?.id }} — {{ selectedReparto?.repartidorNombre }}</h5>
+    <button type="button" class="btn-close text-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+
+  <div class="modal-body">
+    @if (selectedReparto; as rep) {
+      <p class="mb-1"><strong>Inicio:</strong> {{ rep.fechaHoraInicio | date:'full' }}</p>
+      <p class="mb-2"><strong>Estado:</strong> {{ rep.estado }}</p>
+
+      <h6 class="mt-3">Pedidos en este reparto</h6>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th class="text-end">Monto</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of rep.pedidos; track p.id) {
+              <tr>
+                <td>{{ p.id }}</td>
+                <td>{{ p.fecha | date:'short' }}</td>
+                <td>{{ p.clienteNombre }}</td>
+                <td class="text-end">{{ p.total | currency:'ARS' }}</td>
+                <td><span class="badge bg-light text-dark">{{ p.estado }}</span></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="table-active">
+              <td colspan="3" class="text-end fw-bold">TOTAL REPARTO</td>
+              <td class="text-end fw-bold">{{ totalReparto(rep) | currency:'ARS' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    } @else {
+      <p>No hay reparto seleccionado.</p>
+    }
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-danger" (click)="modal.close()">Cerrar</button>
+  </div>
+</ng-template>
