@@ -2,12 +2,17 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Observable, BehaviorSubject, combineLatest, map } from 'rxjs';
-import { RepartosService, Reparto, PedidoMini } from '../../services/repartos-service';
+import { RepartosService } from '../../services/repartos-service';
 import { AuthService } from '../../services/auth-service';
+import { Reparto } from '../../model/reparto.model';
+import { Pedido } from '../../model/pedido.model';
+import { ActionBar } from '../action-bar/action-bar';
+import { FormModal } from '../form-modal/form-modal';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-repartos',
-  imports: [CommonModule, NgbModule],
+  imports: [CommonModule, NgbModule, ActionBar, FormModal, ReactiveFormsModule],
   templateUrl: './repartos.html',
   styleUrl: './repartos.css'
 })
@@ -29,10 +34,14 @@ export class Repartos {
   private CURRENT_CLIENT_ID = 1;
   private CURRENT_REPARTIDOR_ID = 21;
 
-  // seleccionado para el modal
+  // seleccionado para el modal de "Ver"
   selectedReparto: Reparto | null = null;
 
-  constructor() {
+  //Modal de alta de reparto
+  isModalOpen = false;
+  repartoForm: FormGroup;
+
+  constructor(private fb: FormBuilder) {
     this.repartos$ = this.repartosService.getAll();
 
     this.visibleRepartos$ = combineLatest([this.repartos$, this.role$, this.filter$]).pipe(
@@ -46,10 +55,10 @@ export class Repartos {
           list = repartos.slice();
         } else if (role === 'empleado') {
           // si el empleado es repartidor, ver solo sus repartos
-          list = repartos.filter(r => r.repartidorId === this.CURRENT_REPARTIDOR_ID);
+          list = repartos.filter(r => r.usuario.idUsuario === this.CURRENT_REPARTIDOR_ID);
         } else if (role === 'cliente') {
           // cliente ve repartos que contienen sus pedidos
-          list = repartos.filter(r => r.pedidos.some(p => p.clienteId === this.CURRENT_CLIENT_ID));
+          list = repartos.filter(r => r.pedidosList.some(p => p.sucursal.id === this.CURRENT_CLIENT_ID));
         } else {
           list = repartos.slice();
         }
@@ -58,15 +67,24 @@ export class Repartos {
         if (q) {
           list = list.filter(r =>
             r.id.toString().includes(q) ||
-            (r.repartidorNombre || '').toLowerCase().includes(q) ||
-            r.pedidos.some(p => (p.clienteNombre || '').toLowerCase().includes(q) || p.id.toString().includes(q))
+            (r.usuario.nombreCompletoUsuario || '').toLowerCase().includes(q) ||
+            r.pedidosList.some(p => (p.sucursal.nombreSucursal || '').toLowerCase().includes(q) || p.id.toString().includes(q))
           );
         }
 
         // 3) ordenar por fecha inicio descendente
-        return list.sort((a, b) => +new Date(b.fechaHoraInicio) - +new Date(a.fechaHoraInicio));
+        return list.sort((a, b) => +new Date(b.fechaHoraInicioReparto) - +new Date(a.fechaHoraInicioReparto));
       })
     );
+
+     // Definimos el formulario específico de Repartos
+    this.repartoForm = this.fb.group({
+      nombre: ['', Validators.required],
+      descripcion: [''],
+      precio: [0, [Validators.required, Validators.min(1)]],
+      categoria: ['', Validators.required],
+      imagenUrl: ['']
+    });
   }
 
   onFilterChange(value: string) {
@@ -81,14 +99,34 @@ export class Repartos {
   // helpers
   totalReparto(reparto: Reparto | null): number {
     if (!reparto) return 0;
-    return reparto.pedidos.reduce((acc, p) => acc + (p.total ?? 0), 0);
+    return reparto.pedidosList.reduce((acc, p) => acc + (p.importeTotalPedido ?? 0), 0);
   }
 
-  totalPedido(p: PedidoMini): number {
-    return p.total ?? 0;
+  totalPedido(p: Pedido): number {
+    return p.importeTotalPedido ?? 0;
   }
 
   crearNuevoReparto() {
     console.log('Crear nuevo reparto (pendiente)');
+  }
+
+  //---MODAL---
+  openModal() {
+    this.isModalOpen = true;
+  }
+
+  closeModal() {
+    this.isModalOpen = false;
+    this.repartoForm.reset(); // Limpiar al cerrar
+  }
+
+  guardarReparto() {
+    if (this.repartoForm.valid) {
+      console.log('Guardando Reparto:', this.repartoForm.value);
+      // Aquí llamas a tu servicio: this.repartoService.create(...)
+      this.closeModal();
+    } else {
+      this.repartoForm.markAllAsTouched(); // Mostrar errores si faltan datos
+    }
   }
 }

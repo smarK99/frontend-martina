@@ -1,0 +1,5 @@
+.action-bar {
+  /* Asegura que no se pegue demasiado al navbar si este es fixed */
+  position: relative;
+  z-index: 10;
+}

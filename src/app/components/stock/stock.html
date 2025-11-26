@@ -1,3 +1,19 @@
+<!-- <app-action-bar title="Control de Stock e Insumos">
+  
+  <button class="btn btn-outline-secondary d-flex align-items-center gap-2">
+    <i class="bi bi-printer"></i> 
+  </button>
+
+  <button class="btn btn-outline-secondary d-flex align-items-center gap-2">
+    <i class="bi bi-printer"></i> 
+  </button>
+
+  <button class="btn btn-danger d-flex align-items-center gap-2">
+    <i class="bi bi-box-seam"></i> Realizar Conteo
+  </button>
+
+</app-action-bar> -->
+
 <section class="py-4">
   <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -31,17 +47,17 @@
             <th>#</th>
             <th>Fecha / Hora</th>
             <th>Empleado</th>
-            <th>Items contados</th>
-            <th></th>
+            <!-- <th>Items contados</th> -->
+            <!-- <th></th> -->
           </tr>
         </thead>
         <tbody>
           @for (c of counts; track c.id) {
           <tr>
             <td>{{ c.id }}</td>
-            <td>{{ c.fechaHora | date:'short' }}</td>
-            <td>{{ c.empleadoNombre }}</td>
-            <td>{{ c.items.length }}</td>
+            <td>{{ c.fechaHoraAltaConteoStock | date:'short' }}</td>
+            <td>{{ c.usuario.nombreCompletoUsuario }}</td>
+            <!-- <td>32</td> -->
             <td class="text-end">
               <button class="btn btn-sm btn-outline-primary" (click)="openDetailsModal(detailModal, c)">
                 Ver
@@ -85,21 +101,33 @@
         <thead class="table-danger">
           <tr>
             <th class="text-center">Cant.</th>
-            <th>Producto</th>
+            <th>Producto/Insumo</th>
             <th class="text-end">Precio Unit.</th>
             <th class="text-end">Subtotal</th>
           </tr>
         </thead>
         <tbody>
-          @for (it of sc.items; track it.id) {
+          @for (it of sc.csproductosList; track it.id) {
           <tr>
-            <td class="text-center">{{ it.cantidadContada }}</td>
-            <td>{{ it.nombre }}</td>
-            <td class="text-end">{{ it.precioUnitario }}</td>
+            <td class="text-center">{{ it.cantidadStockProducto }}</td>
+            <td>{{ it.producto.nombreProducto }}</td>
+            <td class="text-end">{{it.producto.precioCostoProducto | currency}}</td>
             <td class="text-end">
-              {{ it.cantidadContada * it.precioUnitario }}
+              {{ it.cantidadStockProducto * it.producto.precioCostoProducto | currency}}
             </td>
           </tr>
+          }
+
+          @for (ins of sc.csinsumosList; track ins.id) {
+            <tr>
+              <td class="text-center">{{ ins.cantidadStockInsumo }}</td>
+              <td>{{ ins.insumo.nombreInsumo }}</td>
+              <td class="text-end">{{ ins.insumo.precioCompraInsumo | currency}}</td>
+              
+              <td class="text-end">
+                {{ ins.cantidadStockInsumo * ins.insumo.precioCompraInsumo | currency}}
+              </td>
+            </tr>
           }
         </tbody>
 
@@ -109,7 +137,6 @@
             <td colspan="2" class="text-center fw-bold">VALOR TOTAL STOCK</td>
             <td class="text-end"></td>
             <td class="text-end fw-bold">
-              <!-- Si querés calcular un total real, implementá totalValue() en el TS -->
               {{ totalValue() === 0 ? '$ 0' : ('$' + totalValue()) }}
             </td>
           </tr>

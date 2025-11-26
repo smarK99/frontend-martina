@@ -4,12 +4,13 @@ import { RouterModule } from '@angular/router';
 import { Observable, combineLatest, map, BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../services/auth-service';
 import { PedidoService } from '../../services/pedido-service';
-import { Pedido } from '../../services/pedido-service';
+import { Pedido } from '../../model/pedido.model';
+import { ActionBar } from '../action-bar/action-bar';
 
 
 @Component({
   selector: 'app-pedidos',
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ActionBar],
   templateUrl: './pedidos.html',
   styleUrl: './pedidos.css'
 })
@@ -51,7 +52,7 @@ export class Pedidos {
         } else if (role === 'admin') {
           list = pedidos.slice(); // todos
         } else if (role === 'cliente') {
-          list = pedidos.filter(p => p.clienteId === this.CURRENT_CLIENT_ID);
+          list = pedidos.filter(p => p.sucursal.id === this.CURRENT_CLIENT_ID);
         } else {
           // empleado u otros roles -> mostramos todos (o ajustar según reglas)
           list = pedidos.slice();
@@ -60,14 +61,14 @@ export class Pedidos {
         // 2) Aplicar filtro de texto si corresponde
         if (q) {
           list = list.filter(p =>
-            (p.clienteNombre || '').toLowerCase().includes(q) ||
+            (p.sucursal.nombreSucursal || '').toLowerCase().includes(q) ||
             p.id.toString().includes(q) ||
-            (p.estado || '').toLowerCase().includes(q)
+            (p.estadoPedido.nombreEstadoPedido || '').toLowerCase().includes(q)
           );
         }
 
         // 3) ordenar por fecha descendente y devolver
-        return list.sort((a, b) => +new Date(b.fecha) - +new Date(a.fecha));
+        return list.sort((a, b) => +new Date(b.fechaHoraAltaPedido) - +new Date(a.fechaHoraAltaPedido));
       })
     );
   }

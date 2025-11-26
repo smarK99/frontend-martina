@@ -1,23 +1,96 @@
+<app-action-bar title="Gestión de Productos">
+
+  <div class="dropdown">
+    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+      aria-expanded="false">
+      Gestionar...
+    </button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" href="#">Categorías</a></li>
+      <li><a class="dropdown-item" href="#">Insumos</a></li>
+      <li><a class="dropdown-item" href="#">Productos</a></li>
+    </ul>
+  </div>
+  <!-- <button class="btn btn-outline-secondary d-flex align-items-center gap-2">
+    <i class="bi bi-tags"></i> Gestionar Categorías
+  </button>
+
+  <button class="btn btn-outline-secondary d-flex align-items-center gap-2">
+    <i class="bi bi-tags"></i> Gestionar Insumos
+  </button>
+
+  <button class="btn btn-outline-secondary d-flex align-items-center gap-2">
+    <i class="bi bi-tags"></i> Gestionar Productos
+  </button> -->
+
+  <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal()">
+    <i class="bi bi-plus-lg"></i> Nuevo Producto
+  </button>
+</app-action-bar>
+
+<!--Modal con formulario-->
+<app-form-modal 
+  [isOpen]="isModalOpen"
+  title="Alta de Nuevo Producto"
+  actionButtonLabel="Crear Producto"
+  (onClose)="closeModal()"
+  (onConfirm)="guardarProducto()">
+
+  <form [formGroup]="productoForm">
+    
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Nombre del Producto</label>
+        <input type="text" class="form-control" formControlName="nombre" placeholder="Ej: Triple Jamón">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Categoría</label>
+        <select class="form-select" formControlName="categoria">
+          <option value="">Seleccionar...</option>
+          <option value="simples">Simples</option>
+          <option value="triples">Triples</option>
+          <option value="bebidas">Bebidas</option>
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Precio ($)</label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="number" class="form-control" formControlName="precio">
+        </div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Descripción</label>
+        <textarea class="form-control" formControlName="descripcion" rows="3"></textarea>
+      </div>
+    </div>
+
+  </form>
+  </app-form-modal>
+
 <section class="py-5 bg-light">
   <div class="container">
     <h2 class="mb-4 text-center">Nuestros Productos</h2>
     <div class="row g-4">
       @for (p of productos; track p.id) {
-        <div class="col-md-4">
-          <div class="card h-100 shadow-sm">
-            <img [src]="p.imagen" class="card-img-top" [alt]="p.nombre" />
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">{{ p.nombre }}</h5>
-              <p class="card-text flex-grow-1">{{ p.descripcion }}</p>
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-bold">${{ p.precio }}</span>
-                <button class="btn btn-danger btn-sm" (click)="agregarAlCarrito(p)">
-                  Comprar
-                </button>
-              </div>
+      <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+          <img [src]="'../../assets/martina-logo.png'" class="card-img-top" [alt]="p.nombreProducto" />
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ p.nombreProducto }}</h5>
+            <p class="card-text flex-grow-1">{{ p.descripcionProducto }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-bold">$ 1500</span>
+              <button class="btn btn-danger btn-sm" (click)="agregarAlCarrito(p)">
+                Comprar
+              </button>
             </div>
           </div>
         </div>
+      </div>
       }
     </div>
   </div>

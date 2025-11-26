@@ -1,21 +1,40 @@
-export interface ProductoInsumo {
+export interface Categoria {
   id?: number;
-  cantidadInsumo: number;
-  insumo: {
-    id: number;
-    nombreInsumo: string;
-    precioCompraInsumo?: number;
-    fechaHoraAltaInsumo?: string; // ISO string del backend
-  };
+  nombreCategoria: string;
+  descripcionCategoria: string;
+  fechaHoraAltaCategoria?: string;
+  fechaHoraBajaCategoria?: string | null;
+}
+
+// export interface UnidadMedida {
+//   id?: number;
+//   nombreUnidadMedida: string;
+//   fechaHoraAltaUnidadMedida?: string;
+//   fechaHoraBajaUnidadMedida?: string | null;
+// }
+
+export interface Insumo {
+  id?: number;
+  nombreInsumo: string;
+  descipcionInsumo: string;
+  precioCompraInsumo: number;
+  fechaHoraAltaInsumo?: string;
+  fechaHoraBajaInsumo?: string | null;
 }
 
 export interface Producto {
-  id: number;
+  id?: number;
   nombreProducto: string;
-  descripcion?: string;
-  precio?: number;
-  imagenUrl?: string; // URL a /assets/... o URL absoluta desde backend
-  productoInsumoList?: ProductoInsumo[];
+  descripcionProducto: string;
+  precioCostoProducto: number;
   fechaHoraAltaProducto?: string;
   fechaHoraBajaProducto?: string | null;
+  categoria?: Categoria;
+  productoInsumoList?: ProductoInsumo[];
+}
+
+export interface ProductoInsumo {
+  id?: number;
+  cantidadInsumo: number;
+  insumo: Insumo;
 }
