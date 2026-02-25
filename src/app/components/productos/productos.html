@@ -23,53 +23,138 @@
     <i class="bi bi-tags"></i> Gestionar Productos
   </button> -->
 
-  <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal()">
+  <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal(altaProductoModal)">
     <i class="bi bi-plus-lg"></i> Nuevo Producto
   </button>
 </app-action-bar>
 
 <!--Modal con formulario-->
-<app-form-modal 
-  [isOpen]="isModalOpen"
-  title="Alta de Nuevo Producto"
-  actionButtonLabel="Crear Producto"
-  (onClose)="closeModal()"
-  (onConfirm)="guardarProducto()">
+<ng-template #altaProductoModal let-modal>
+  
+  <div class="modal-header modal-header-red text-white">
+    <h5 class="modal-title">Alta de Nuevo Producto</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
 
-  <form [formGroup]="productoForm">
-    
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Nombre del Producto</label>
-        <input type="text" class="form-control" formControlName="nombre" placeholder="Ej: Triple Jamón">
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label">Categoría</label>
-        <select class="form-select" formControlName="categoria">
-          <option value="">Seleccionar...</option>
-          <option value="simples">Simples</option>
-          <option value="triples">Triples</option>
-          <option value="bebidas">Bebidas</option>
-        </select>
-      </div>
-
-      <div class="col-md-4">
-        <label class="form-label">Precio ($)</label>
-        <div class="input-group">
-          <span class="input-group-text">$</span>
-          <input type="number" class="form-control" formControlName="precio">
+  <div class="modal-body">
+    <form [formGroup]="productoForm">
+      <div class="row g-3">
+        
+        <div class="col-md-6">
+          <label class="form-label">Nombre del Producto</label>
+          <input type="text" class="form-control" formControlName="nombre" placeholder="Ej: Triple Jamón">
         </div>
-      </div>
 
-      <div class="col-12">
-        <label class="form-label">Descripción</label>
-        <textarea class="form-control" formControlName="descripcion" rows="3"></textarea>
-      </div>
-    </div>
+        <div class="col-md-6">
+          <label class="form-label">Categoría</label>
+          <select class="form-select" formControlName="categoria">
+            <option value="">Seleccionar...</option>
+            <option value="simples">Simples</option>
+            <option value="triples">Triples</option>
+            <option value="pebete">Pebete</option>
+            <option value="hamburguesa">Hamburguesa</option>
+            <option value="paquete">Paquete</option>
+            <option value="postres">Postres</option>
+          </select>
+        </div>
 
-  </form>
-  </app-form-modal>
+        <div class="col-md-4">
+          <label class="form-label">Precio ($)</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" class="form-control" formControlName="precio">
+          </div>
+        </div>
+
+        <div class="col-12 mt-4">
+          <label class="form-label text-danger fw-bold border-bottom pb-2 w-100">Ingredientes de la Receta</label>
+
+          <div class="row g-2 align-items-end mb-3 p-3 bg-light rounded border border-light-subtle">
+            <div class="col-md-6">
+              <label for="selectInsumo" class="form-label small fw-bold">Seleccionar Insumo</label>
+              <select class="form-select" id="selectInsumo">
+                <option value="" selected disabled>Elige un insumo...</option>
+                <option value="1">Carne de Hamburguesa (x unidad)</option>
+                <option value="2">Pan de Papa (x unidad)</option>
+                <option value="3">Fetas de Queso Cheddar (x unidad)</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label for="cantidadInsumo" class="form-label small fw-bold">Cantidad</label>
+              <input type="number" class="form-control" id="cantidadInsumo" placeholder="Ej: 1" min="1" step="1">
+            </div>
+
+            <div class="col-md-3">
+              <button type="button" class="btn bg-brand w-100">
+                <i class="bi bi-plus-lg me-1"></i> Agregar
+              </button>
+            </div>
+          </div>
+
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold small">
+              Insumos Agregados a la Receta
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light small">
+                  <tr>
+                    <th scope="col">Insumo</th>
+                    <th scope="col" class="text-center" style="width: 120px;">Cantidad</th>
+                    <th scope="col" class="text-end" style="width: 60px;">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Carne de Hamburguesa</td>
+                    <td class="text-center fw-bold">1</td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar">
+                        <i class="bi bi-trash-fill"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Pan de Papa</td>
+                    <td class="text-center fw-bold">1</td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar">
+                        <i class="bi bi-trash-fill"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Fetas de Queso Cheddar</td>
+                    <td class="text-center fw-bold">2</td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm btn-outline-danger border-0" title="Eliminar">
+                        <i class="bi bi-trash-fill"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="form-text mt-2">Define qué insumos y en qué cantidad se necesitan para elaborar <b>una unidad</b> de este producto.</div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label mt-3">Descripción Adicional</label>
+          <textarea class="form-control" formControlName="descripcion" rows="3"></textarea>
+        </div>
+        
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
+    <button type="button" class="btn bg-brand" (click)="guardarProducto()">Crear Producto</button>
+  </div>
+
+</ng-template>
 
 <section class="py-5 bg-light">
   <div class="container">
@@ -84,8 +169,8 @@
             <p class="card-text flex-grow-1">{{ p.descripcionProducto }}</p>
             <div class="d-flex justify-content-between align-items-center">
               <span class="fw-bold">$ 1500</span>
-              <button class="btn btn-danger btn-sm" (click)="agregarAlCarrito(p)">
-                Comprar
+              <button class="btn btn-danger btn-sm">
+                Ver Detalles
               </button>
             </div>
           </div>

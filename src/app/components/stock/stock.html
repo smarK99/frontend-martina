@@ -88,9 +88,9 @@
 
 <!-- Modal: detalle de conteo -->
 <ng-template #detailModal let-modal>
-  <div class="modal-header modal-header-red">
+  <div class="modal-header modal-header-red text-white">
     <h5 class="modal-title">Detalle Conteo #{{ formatId(selectedCount?.id) }}</h5>
-    <button type="button" class="btn-close text-white" aria-label="Close" (click)="modal.dismiss()"></button>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
   </div>
 
   <div class="modal-body">
@@ -149,6 +149,6 @@
   </div>
 
   <div class="modal-footer">
-    <button class="btn btn-danger" (click)="modal.close()">Cerrar</button>
+    <button class="btn bg-brand" (click)="modal.close()">Cerrar</button>
   </div>
 </ng-template>

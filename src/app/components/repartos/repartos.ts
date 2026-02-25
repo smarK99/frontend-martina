@@ -7,12 +7,11 @@ import { AuthService } from '../../services/auth-service';
 import { Reparto } from '../../model/reparto.model';
 import { Pedido } from '../../model/pedido.model';
 import { ActionBar } from '../action-bar/action-bar';
-import { FormModal } from '../form-modal/form-modal';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-repartos',
-  imports: [CommonModule, NgbModule, ActionBar, FormModal, ReactiveFormsModule],
+  imports: [CommonModule, NgbModule, ActionBar, ReactiveFormsModule],
   templateUrl: './repartos.html',
   styleUrl: './repartos.css'
 })
@@ -77,7 +76,7 @@ export class Repartos {
       })
     );
 
-     // Definimos el formulario específico de Repartos
+    // Definimos el formulario específico de Repartos
     this.repartoForm = this.fb.group({
       nombre: ['', Validators.required],
       descripcion: [''],

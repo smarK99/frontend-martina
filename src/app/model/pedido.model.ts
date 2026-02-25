@@ -7,6 +7,7 @@ export interface Sucursal {
   direccionSucursal: string;
   fechaHoraAltaSucursal: string;
   fechaHoraBajaSucursal: string | null;
+  sucursalProductoList: SucursalProducto[];
 }
 
 export interface SucursalProducto {
@@ -33,7 +34,7 @@ export interface EstadoPedido {
 
 export interface DetallePedido {
   id?: number;
-  cantidadProductoPedido: number;
+  cantidadDetallePedido: number;
   subtotalDetallePedido: number;
   producto: Producto;
 }
