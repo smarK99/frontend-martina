@@ -5,7 +5,6 @@ import { Observable, BehaviorSubject, combineLatest, map } from 'rxjs';
 import { RepartosService } from '../../services/repartos-service';
 import { AuthService } from '../../services/auth-service';
 import { Reparto } from '../../model/reparto.model';
-import { Pedido } from '../../model/pedido.model';
 import { ActionBar } from '../action-bar/action-bar';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
@@ -101,7 +100,7 @@ export class Repartos {
     return reparto.pedidosList.reduce((acc, p) => acc + (p.importeTotalPedido ?? 0), 0);
   }
 
-  totalPedido(p: Pedido): number {
+  totalPedido(p: any): number {
     return p.importeTotalPedido ?? 0;
   }
 

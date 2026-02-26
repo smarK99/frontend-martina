@@ -2,8 +2,6 @@ import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { environment } from '../../environment/environment';
 import { HttpClient } from '@angular/common/http';
-import { Pedido } from '../model/pedido.model';
-
 
 @Injectable({
   providedIn: 'root'
@@ -14,14 +12,17 @@ export class PedidoService {
   
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<Pedido[]> {
-    return this.http.get<Pedido[]>(`${this.baseUrl}/pedido/getAll`);
+  getAll(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/pedido/getAll`);
   }
 
-  getOne(id: number): Observable<Pedido> {
-    return this.http.get<Pedido>(`${this.baseUrl}/pedido/${id}`);
+  getOne(id: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/pedido/${id}`);
   }
 
+  create(pedidoDTO: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/pedido/realizar_pedido`, pedidoDTO);
+  }
   
 
 }

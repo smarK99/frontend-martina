@@ -1,4 +1,3 @@
-import { Pedido } from './pedido.model';
 import { Usuario } from './usuario.model';
 
 export interface Gasto {
@@ -34,5 +33,5 @@ export interface Reparto{
     usuario: Usuario;
     rendicion: Rendicion;
     estadoReparto: EstadoReparto;
-    pedidosList: Pedido[];
+    pedidosList: any[];
 }

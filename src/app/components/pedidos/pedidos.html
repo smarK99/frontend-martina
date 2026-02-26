@@ -83,6 +83,7 @@
   </div>
 </section>
 
+<!-- Modal Nuevo Pedido -->
 <ng-template #nuevoPedidoModal let-modal>
 
   <div class="modal-header modal-header-red text-white">
@@ -127,7 +128,7 @@
           <select class="form-select form-select-sm" [(ngModel)]="tempProductoId">
             <option [ngValue]="null" disabled selected>Buscar producto...</option>
             @for (prod of productosDisponibles; track prod.id) {
-            <option [value]="prod.id">{{ prod.nombreProducto }} ($ {{ prod.precio | currency:'ARS' }})</option>
+            <option [value]="prod.id">{{ prod.nombre }} ($ {{ prod.precio | currency:'ARS' }})</option>
             }
           </select>
         </div>
