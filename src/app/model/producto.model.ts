@@ -26,7 +26,6 @@ export interface Producto {
   id?: number;
   nombreProducto: string;
   descripcionProducto: string;
-  precioCostoProducto: number;
   fechaHoraAltaProducto?: string;
   fechaHoraBajaProducto?: string | null;
   categoria?: Categoria;
