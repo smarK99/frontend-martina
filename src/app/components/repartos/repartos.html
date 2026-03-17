@@ -4,29 +4,11 @@
     <i class="bi bi-tags"></i>Mis Repartos 
   </button>
 
-  <button class="btn btn-danger d-flex align-items-center gap-2" >
+  <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal(altaRepartoModal)">
     <i class="bi bi-plus-lg"></i> Nuevo Reparto
   </button>
 
 </app-action-bar>
-
-<!-- <app-form-modal 
-  [isOpen]="isModalOpen" 
-  title="Nuevo Reparto" 
-  (onConfirm)="guardarReparto()">
-
-  <form [formGroup]="repartoForm">
-    <div class="mb-3">
-      <label>Nombre del Repartidor</label>
-      <input type="text" class="form-control" formControlName="nombreRepartidor">
-    </div>
-    <div class="mb-3">
-      <label>Zona de Entrega</label>
-      <input type="text" class="form-control" formControlName="zona">
-    </div>
-  </form>
-
-</app-form-modal> -->
 
 <section class="py-4">
   <div class="container">
@@ -154,4 +136,43 @@
   <div class="modal-footer">
     <button class="btn bg-brand" (click)="modal.close()">Cerrar</button>
   </div>
+</ng-template>
+
+<!--Modal alta reparto--> 
+<ng-template #altaRepartoModal let-modal>
+  
+  <div class="modal-header modal-header-red text-white">
+    <h5 class="modal-title">Alta de Nuevo Reparto</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+
+  <div class="modal-body">
+    <form [formGroup]="repartoForm">
+      <div class="row g-3">
+        
+        <div class="col-md-6">
+          <label class="form-label">Nombre del Reparto</label>
+          <input type="text" class="form-control" formControlName="nombre" placeholder="Ej: Ruta Norte Maipú">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-bold">Repartidor</label>
+          <input type="text" class="form-control" [value]="driverInfo ? driverInfo.id + ' - ' + driverInfo.nombre : 'Sin sesión'" disabled />
+        </div>
+
+        <div class="col-12 mt-4">
+          <label class="form-label">Descripción / Notas Adicionales</label>
+          <textarea class="form-control" formControlName="descripcion" rows="3" placeholder="Ej: Entregas antes de las 12 pls"></textarea>
+          <div class="form-text mt-2">Describe cualquier detalle importante sobre esta ruta o recorrido.</div>
+        </div>
+        
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
+    <button type="button" class="btn bg-brand text-white" (click)="guardarReparto()">Crear Reparto</button>
+  </div>
+
 </ng-template>

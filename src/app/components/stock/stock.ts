@@ -25,7 +25,7 @@ interface ItemInsumoStock {
 
 @Component({
   selector: 'app-stock',
-  imports: [CommonModule, NgbModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, NgbModule, ReactiveFormsModule, FormsModule, ActionBar],
   templateUrl: './stock.html',
   styleUrl: './stock.css'
 })

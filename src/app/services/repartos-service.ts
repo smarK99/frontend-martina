@@ -67,17 +67,16 @@ import { Reparto } from '../model/reparto.model';
 })
 export class RepartosService {
   
-  private baseUrl = `${environment.apiUrl}/reparto/getAll`;
+  private baseUrl = `${environment.apiUrl}/reparto`;
 
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<Reparto[]> {
-    return this.http.get<Reparto[]>(this.baseUrl);
+    return this.http.get<Reparto[]>(`${this.baseUrl}/getAll`);
   }
 
-
-  // getAll(): Observable<Reparto[]> {
-  //   return of(MOCK_REPARTOS).pipe(delay(200));
-  // }
+  create(repartoDTO: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/crear`, repartoDTO);
+  }
 
 }

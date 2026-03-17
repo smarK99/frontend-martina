@@ -1,12 +1,18 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Observable, BehaviorSubject, combineLatest, map } from 'rxjs';
+import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; // Añadido switchMap
 import { RepartosService } from '../../services/repartos-service';
 import { AuthService } from '../../services/auth-service';
 import { Reparto } from '../../model/reparto.model';
 import { ActionBar } from '../action-bar/action-bar';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+
+// --- INTERFACE PARA USUARIO SIMULADO (FAKE LOGIN) ---
+interface UsuarioAutenticado {
+  id: number;
+  nombre: string;
+}
 
 @Component({
   selector: 'app-repartos',
@@ -14,13 +20,22 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
   templateUrl: './repartos.html',
   styleUrl: './repartos.css'
 })
-export class Repartos {
+export class Repartos implements OnInit {
+  // ==========================================
+  // 1. INYECCIÓN DE DEPENDENCIAS
+  // ==========================================
   private repartosService = inject(RepartosService);
   private modalService = inject(NgbModal);
   private auth = inject(AuthService);
+  private fb = inject(FormBuilder);
 
+  // ==========================================
+  // 2. VARIABLES DE ESTADO Y OBSERVABLES
+  // ==========================================
   role$ = this.auth.role$;
 
+  // Gatillo para recargar la tabla automáticamente
+  private refresh$ = new BehaviorSubject<void>(undefined);
   repartos$!: Observable<Reparto[]>;
   visibleRepartos$!: Observable<Reparto[]>;
 
@@ -28,20 +43,35 @@ export class Repartos {
   private filterSubject = new BehaviorSubject<string>('');
   filter$ = this.filterSubject.asObservable();
 
-  // demo: id del cliente "loggeado" y repartidor loggeado (reemplazalos por valores reales)
+  // demo: id del cliente "loggeado" y repartidor loggeado
   private CURRENT_CLIENT_ID = 1;
-  private CURRENT_REPARTIDOR_ID = 21;
+  private CURRENT_REPARTIDOR_ID = 2;
 
   // seleccionado para el modal de "Ver"
   selectedReparto: Reparto | null = null;
 
-  //Modal de alta de reparto
-  isModalOpen = false;
+  // Info simulada del chofer logueado para el alta
+  driverInfo: UsuarioAutenticado | null = null;
+
+  // Modal de alta de reparto
   repartoForm: FormGroup;
 
-  constructor(private fb: FormBuilder) {
-    this.repartos$ = this.repartosService.getAll();
+  // ==========================================
+  // 3. CONSTRUCTOR Y CICLO DE VIDA
+  // ==========================================
+  constructor() {
+    // Definimos el formulario específico de Repartos (limpiado de campos de productos)
+    this.repartoForm = this.fb.group({
+      nombre: ['', Validators.required],
+      descripcion: ['']
+    });
 
+    // Conectamos la lista base al gatillo de refresco
+    this.repartos$ = this.refresh$.pipe(
+      switchMap(() => this.repartosService.getAll())
+    );
+
+    // Tu lógica original de filtrado por roles (INTACTA)
     this.visibleRepartos$ = combineLatest([this.repartos$, this.role$, this.filter$]).pipe(
       map(([repartos, role, filter]) => {
         const q = (filter || '').trim().toLowerCase();
@@ -74,27 +104,81 @@ export class Repartos {
         return list.sort((a, b) => +new Date(b.fechaHoraInicioReparto) - +new Date(a.fechaHoraInicioReparto));
       })
     );
-
-    // Definimos el formulario específico de Repartos
-    this.repartoForm = this.fb.group({
-      nombre: ['', Validators.required],
-      descripcion: [''],
-      precio: [0, [Validators.required, Validators.min(1)]],
-      categoria: ['', Validators.required],
-      imagenUrl: ['']
-    });
   }
 
-  onFilterChange(value: string) {
-    this.filterSubject.next(value ?? '');
+  ngOnInit() {
+    // Simulamos la sesión usando tu variable CURRENT_REPARTIDOR_ID
+    this.driverInfo = { id: this.CURRENT_REPARTIDOR_ID, nombre: 'Santiago Marquez (Simulado)' };
   }
 
+  // ==========================================
+  // 4. LÓGICA DE MODALES (DETALLE Y ALTA)
+  // ==========================================
+  
+  // Modal de Detalles
   openDetailsModal(content: any, reparto: Reparto) {
     this.selectedReparto = reparto;
     this.modalService.open(content, { centered: true, size: 'lg' });
   }
 
-  // helpers
+  // Modal de Alta - Manejo inteligente con ng-bootstrap
+  openModal(modalTemplate: any) {
+    const modalRef = this.modalService.open(modalTemplate, { size: 'lg', centered: true });
+
+    modalRef.result.then(
+      () => { this.limpiarFormularioAlta(); }, // Cierre exitoso
+      () => { this.limpiarFormularioAlta(); }  // Cierre por ESC o clic afuera
+    );
+  }
+
+  closeModal() {
+    this.modalService.dismissAll();
+  }
+
+  private limpiarFormularioAlta() {
+    this.repartoForm.reset({ nombre: '', descripcion: '' });
+  }
+
+  guardarReparto() {
+    if (this.repartoForm.valid && this.driverInfo) {
+      
+      const payload = {
+        idUsuario: this.driverInfo.id,
+        nombreReparto: this.repartoForm.value.nombre,
+        descripcionReparto: this.repartoForm.value.descripcion || ''
+      };
+
+      console.log('Enviando DTO de Reparto al Backend:', payload);
+
+      // Usando tu servicio inyectado
+      this.repartosService.create(payload).subscribe({
+        next: (respuesta) => {
+          this.closeModal();
+          this.refresh$.next(); // Actualiza tu tabla al instante
+          
+          setTimeout(() => {
+            alert('¡Reparto creado con éxito!');
+          }, 300);
+        },
+        error: (err) => {
+          console.error('Error al intentar crear el reparto:', err);
+          alert('Hubo un error al guardar el reparto. Revisa la consola.');
+        }
+      });
+
+    } else {
+      this.repartoForm.markAllAsTouched();
+      alert('Por favor, completa el nombre del reparto.');
+    }
+  }
+
+  // ==========================================
+  // 5. HELPERS
+  // ==========================================
+  onFilterChange(value: string) {
+    this.filterSubject.next(value ?? '');
+  }
+
   totalReparto(reparto: Reparto | null): number {
     if (!reparto) return 0;
     return reparto.pedidosList.reduce((acc, p) => acc + (p.importeTotalPedido ?? 0), 0);
@@ -102,29 +186,5 @@ export class Repartos {
 
   totalPedido(p: any): number {
     return p.importeTotalPedido ?? 0;
-  }
-
-  crearNuevoReparto() {
-    console.log('Crear nuevo reparto (pendiente)');
-  }
-
-  //---MODAL---
-  openModal() {
-    this.isModalOpen = true;
-  }
-
-  closeModal() {
-    this.isModalOpen = false;
-    this.repartoForm.reset(); // Limpiar al cerrar
-  }
-
-  guardarReparto() {
-    if (this.repartoForm.valid) {
-      console.log('Guardando Reparto:', this.repartoForm.value);
-      // Aquí llamas a tu servicio: this.repartoService.create(...)
-      this.closeModal();
-    } else {
-      this.repartoForm.markAllAsTouched(); // Mostrar errores si faltan datos
-    }
   }
 }
