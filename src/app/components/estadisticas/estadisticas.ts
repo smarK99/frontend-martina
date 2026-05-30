@@ -237,4 +237,10 @@ export class Estadisticas {
     return pedidos;
   }
 
+esAdmin(rolUsuario: string | null): boolean {
+    if (!rolUsuario) return false;
+    const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', '');
+    return rolLimpio === 'ADMIN';
+  }
+
 }

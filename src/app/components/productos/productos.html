@@ -144,8 +144,10 @@
       @for (p of productos$ | async; track p.id) {
       <div class="col-md-4">
         <div class="card h-100 shadow-sm">
-          <img [src]="'../../assets/martina-logo.png'" class="card-img-top" [alt]="p.nombreProducto" />
-          <div class="card-body d-flex flex-column">
+<img [src]="getImagenProducto(p.nombreProducto)" 
+     class="card-img-top" 
+     [alt]="p.nombreProducto" 
+     style="height: 200px; object-fit: cover; border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem;" />          <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ p.nombreProducto }}</h5>
             <p class="card-text flex-grow-1">{{ p.descripcionProducto }}</p>
             <div class="d-flex justify-content-between align-items-center">

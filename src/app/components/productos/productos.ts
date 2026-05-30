@@ -186,4 +186,25 @@ export class Productos {
       alert('Por favor, completa todos los campos obligatorios del formulario principal.');
     }
   }
+
+  // Agregá este método en tu componente
+  getImagenProducto(nombre: string): string {
+    const nombreLimpio = nombre.toLowerCase();
+
+    if (nombreLimpio.includes('crudo')) {
+      return '/assets/jcrudo.jpg';
+    } 
+    if (nombreLimpio.includes('salame')) {
+      // Reemplazá por el nombre exacto si es distinto
+      return '/assets/salame-verdura.jpg'; 
+    } 
+    if (nombreLimpio.includes('cocido') || nombreLimpio.includes('jyq')) {
+      return '/assets/jcocido.jpg';
+    }
+
+    // Si no encuentra ninguna de esas palabras, pone el logo por defecto
+    return '/assets/martina-logo.png';
+  }
+
+
 }
