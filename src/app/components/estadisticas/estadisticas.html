@@ -3,6 +3,7 @@
         @if (role$ | async; as role) {
         @if (role === 'admin') {
 
+        @if (datosCargados) {
         <!-- KPI row -->
         <div class="row g-3 mb-3">
             <div class="col-md-3">
@@ -22,8 +23,10 @@
             <div class="col-md-3">
                 <div class="card p-3 stat-card">
                     <div class="small text-muted"> <i class="bi bi-trophy"></i> Producto más vendido (30d)</div>
-                    <div class="h6 fw-bold mt-1"> {{ topProductos30Dias.length ? topProductos30Dias[0].nombre : '—' }} </div>
-                    <div class="small text-muted">Unidades: {{ topProductos30Dias.length ? topProductos30Dias[0].cantidad : 0  }}</div>
+                    <div class="h6 fw-bold mt-1"> {{ topProductos30Dias.length ? topProductos30Dias[0].nombre : '—' }}
+                    </div>
+                    <div class="small text-muted">Unidades: {{ topProductos30Dias.length ?
+                        topProductos30Dias[0].cantidad : 0 }}</div>
                 </div>
             </div>
             <div class="col-md-3">
@@ -36,53 +39,20 @@
                 </div>
             </div>
         </div>
-
-        <!-- Charts row -->
-        <div class="row g-3">
-            <div class="col-lg-7">
-                <div class="card p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div><strong> <i class="bi bi-graph-up-arrow"></i> Ventas por semana (últimas 6 semanas)</strong></div>
-                        <div class="small text-muted">Montos en ARS</div>
-                    </div>
-                    <div style="height:320px;">
-                        <canvas baseChart [data]="lineSalesData" [options]="lineSalesOptions" [type]="'line'">
-                        </canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-5">
-                <div class="card p-3 mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div><strong><i class="bi bi-bar-chart"></i> Top productos (cantidad)</strong></div>
-                        <div class="small text-muted">Últimos 30 días</div>
-                    </div>
-                    <div style="height:220px;">
-                        <canvas baseChart [data]="barTopProductsData" [options]="barTopProductsOptions" chartType="bar">
-                        </canvas>
-                    </div>
-                </div>
-
-                <div class="card p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div><strong> <i class="bi bi-bar-chart"></i> Participación por producto</strong></div>
-                        <div class="small text-muted">Últimos 30 días</div>
-                    </div>
-                    <div style="height:220px;">
-                        <canvas baseChart [data]="doughnutData" [options]="doughnutOptions" chartType="doughnut">
-                        </canvas>
-                    </div>
-                </div>
-            </div>
+        } @else {
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border text-danger mb-3" role="status"></div>
+            <h5>Calculando métricas del negocio...</h5>
         </div>
+        }
 
-        <!-- Top3 table -->
-        <div class="row mt-3">
+        <!-- Top table -->
+        <div class="row mt-3 mb-3">
             <div class="col-12">
                 <div class="card p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div><strong> <i class="bi bi-bar-chart-steps"></i> Top 10 productos (últimos 30 días)</strong></div>
+                        <div><strong> <i class="bi bi-bar-chart-steps"></i> Top productos vendidos (últimos 30 días)</strong>
+                        </div>
                         <div class="small text-muted">Ordenado por cantidad</div>
                     </div>
                     <div class="table-responsive">
@@ -110,6 +80,90 @@
                 </div>
             </div>
         </div>
+
+        <!-- Charts row -->
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><strong> <i class="bi bi-graph-up-arrow"></i> Ventas por semana </strong></div>
+                        <div class="small text-muted">Montos en ARS</div>
+                    </div>
+                    <div style="height:320px;">
+                        <canvas baseChart [data]="lineSalesData" [options]="lineSalesOptions" [type]="'line'">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><strong><i class="bi bi-bar-chart"></i> Top productos (cantidad)</strong></div>
+                        <div class="small text-muted">Últimos 30 días</div>
+                    </div>
+                    <div style="height:220px;">
+                        <canvas baseChart [data]="barTopProductsData" [options]="barTopProductsOptions" chartType="bar">
+                        </canvas>
+                    </div>
+                </div>
+
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div><strong> <i class="bi bi-bar-chart"></i> Top productos (monto $)</strong></div>
+                        <div class="small text-muted">Últimos 30 días</div>
+                    </div>
+                    <div style="height:220px;">
+                        <canvas baseChart [data]="doughnutData" [options]="doughnutOptions" chartType="doughnut">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card p-3 shadow-sm border-0">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong> 
+                                <i class="bi bi-shop me-2"></i> Ranking de Ventas por Sucursal
+                            </strong>
+                        </div>
+                        <div class="small text-muted">Ordenado por monto total</div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-striped align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">#</th>
+                                    <th>Sucursal / Cliente</th>
+                                    <th class="text-end pe-3">Monto Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (s of ventasSucursalForDisplay; track s.nombreSucursal) {
+                                <tr>
+                                    <td class="ps-3">{{ s.rank }}</td>
+                                    <td>{{ s.nombreSucursal }}</td>
+                                    <td class="text-end pe-3">
+                                        {{ s.montoTotal | currency:'ARS' }}
+                                    </td>
+                                </tr>
+                                } @empty {
+                                    <tr>
+                                        <td colspan="3" class="text-center py-4 text-muted">
+                                            No hay registros de ventas por sucursal para este periodo.
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
 
         } @else {
         <div class="alert guard-alert">Acceso restringido: estadísticas solo para Admin.</div>

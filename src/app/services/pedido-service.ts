@@ -24,5 +24,8 @@ export class PedidoService {
     return this.http.post(`${this.baseUrl}/pedido/realizar_pedido`, pedidoDTO);
   }
   
+  getPedidosDisponibles(): Observable<any>{
+    return this.http.get(`${this.baseUrl}/pedido/disponibles_reparto`);
+  }
 
 }

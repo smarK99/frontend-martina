@@ -1,21 +1,34 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-//import { NgChartsModule } from 'ng2-charts';
 import { AuthService } from '../../services/auth-service';
-import { Observable, of } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { EstadisticasService } from '../../services/estadisticas-service'; // Servicio real
+import { Observable, forkJoin } from 'rxjs';
 import { Chart, ChartData, ChartOptions, registerables } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 
 Chart.register(...registerables);
 
-/** Tipos de datos de ejemplo (ajustalos a los reales) */
-interface StatPedido {
-  id: number;
-  fecha: string; // ISO
-  clienteNombre: string;
-  total: number;
-  items: { productoId: number; productoNombre: string; cantidad: number; precioUnitario?: number }[];
+// --- INTERFACES PARA DATOS REALES DEL BACKEND ---
+// Proyecciones tal cual vienen de Java (nativeQuery)
+interface ProductosMasVendidosProjection {
+  nombreProducto: string;
+  cantidadTotal: number;
+  montoTotal: number;
+}
+
+// Proyección para tu nueva métrica (monto total ventas por sucursal)
+interface VentasSucursalProjection {
+  nombreSucursal: string; // Coincide con getNombreSucursal();
+  montoTotalVentas: number; // Coincide con getMontoTotalVentas();
+}
+
+
+// --- INTERFACES PARA VISUALIZACIÓN EN EL FRONT (MISMAS QUE TENÍAS) ---
+// Agregamos interfaz para mostrar la tabla de sucursales con rank
+interface VentasSucursalForDisplay {
+  nombreSucursal: string;
+  montoTotal: number;
+  rank: number;
 }
 
 @Component({
@@ -24,217 +37,143 @@ interface StatPedido {
   templateUrl: './estadisticas.html',
   styleUrl: './estadisticas.css'
 })
-export class Estadisticas {
+export class Estadisticas implements OnInit {
 
   private auth = inject(AuthService);
+  private statsService = inject(EstadisticasService); // Servicio real
+  
   role$: Observable<string | null> = this.auth.role$;
+  datosCargados = false; // Bandera para esperar a que carguen los datos
 
-  // --- MOCK DATA (replace with backend calls) ---
-  // pedidos de ejemplo (últimos 60 días)
-  private pedidosMock: StatPedido[] = this.buildMockPedidos();
-
-  // Derived stats (observables or plain values)
+  // --- VARIABLES DE VISTA (MISMAS QUE TENÍAS) ---
   ventasUltimos30Dias = 0;
   ventasUltimos7Dias = 0;
-  pedidosUltimos30Dias = 0;
-  ticketPromedio30Dias = 0;
+  pedidosUltimos30Dias = 0; 
+  ticketPromedio30Dias = 0; // Pendiente de endpoint real
   topProductos30Dias: { nombre: string; cantidad: number; monto: number }[] = [];
-  top3Total: number = 0;
-  // propiedad para la vista (top 10 con rank)
+  top3Total = 0;
   topProductsForDisplay: { nombre: string; cantidad: number; monto: number; rank: number }[] = [];
 
+  // --- NUEVA VARIABLE PARA LA TABLA DE SUCURSALES ---
+  ventasSucursalForDisplay: VentasSucursalForDisplay[] = [];
 
-  // Chart.js data/opts
+
+  // --- CONFIGURACIÓN DE GRÁFICOS (QUEDA IGUAL) ---
   lineSalesData!: ChartData<'line', number[], string>;
   lineSalesOptions: ChartOptions<'line'> = {
     responsive: true,
     plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
     interaction: { mode: 'index', intersect: false },
-    scales: {
-      x: { display: true },
-      y: { display: true, beginAtZero: true }
-    }
+    scales: { x: { display: true }, y: { display: true, beginAtZero: true } }
   };
 
   barTopProductsData!: ChartData<'bar', number[], string>;
   barTopProductsOptions: ChartOptions<'bar'> = {
     responsive: true,
-    plugins: { legend: { display: false }, tooltip: { callbacks: {} } },
+    plugins: { legend: { display: false } },
     scales: { x: { display: true }, y: { display: true, beginAtZero: true } }
   };
 
   doughnutData!: ChartData<'doughnut', number[], string>;
   doughnutOptions: ChartOptions<'doughnut'> = { responsive: true, plugins: { legend: { position: 'bottom' } } };
 
-  constructor() {
-    // compute stats from mock dataset
-    this.computeStats();
-
-    // build charts
-    this.buildLineChart();
-    this.buildTopProductsCharts();
+  ngOnInit() {
+    this.cargarDatosReales();
   }
 
-  // -------------------------
-  private computeStats() {
-    const now = new Date();
-    const daysAgo = (d: number) => {
-      const dt = new Date(now);
-      dt.setDate(dt.getDate() - d);
-      return dt;
-    };
+  private cargarDatosReales() {
+    // forkJoin dispara todas las peticiones al mismo tiempo y espera a que terminen
+    forkJoin({
+      ventas30: this.statsService.getRecaud30Dias(),
+      ventas7: this.statsService.getRecaud7Dias(),
+      productos: this.statsService.getProdsMasVendidos(), 
+      ventasSucursal: this.statsService.getVtasPorSucursal() 
+    }).subscribe({
+      next: (resultados) => {
+        // 1. Asignar los valores directos
+        this.ventasUltimos30Dias = resultados.ventas30.totalVentas || 0;
+        this.pedidosUltimos30Dias = resultados.ventas30.totalPedidos || 0;
+        this.ventasUltimos7Dias = resultados.ventas7 || 0;
 
-    const inLast = (iso: string, days: number) => new Date(iso) >= daysAgo(days);
+        // 2. Calcular el ticket promedio 
+        this.ticketPromedio30Dias = this.pedidosUltimos30Dias > 0 
+          ? this.ventasUltimos30Dias / this.pedidosUltimos30Dias 
+          : 0;
 
-    // sales last 30 & 7 days
-    const pedidos30 = this.pedidosMock.filter(p => inLast(p.fecha, 30));
-    const pedidos7 = this.pedidosMock.filter(p => inLast(p.fecha, 7));
+        // 3. Mapear productos
+        this.topProductos30Dias = resultados.productos.map(p => ({
+          nombre: p.nombreProducto,
+          cantidad: p.cantidadTotal,
+          // Ahora usamos el monto real que programaste en la query
+          monto: p.montoTotal 
+        }));
 
-    this.ventasUltimos30Dias = pedidos30.reduce((s, p) => s + p.total, 0);
-    this.ventasUltimos7Dias = pedidos7.reduce((s, p) => s + p.total, 0);
-    this.pedidosUltimos30Dias = pedidos30.length;
-    this.ticketPromedio30Dias = this.pedidosUltimos30Dias ? Math.round(this.ventasUltimos30Dias / this.pedidosUltimos30Dias) : 0;
+        // 4. Preparar la tabla Top 10 productos
+        this.topProductsForDisplay = this.topProductos30Dias
+          .slice(0, 10)
+          .map((t, i) => ({ ...t, rank: i + 1 }));
 
-    // aggregate top products in last 30 days
-    const prodMap = new Map<string, { nombre: string; cantidad: number; monto: number }>();
-    for (const p of pedidos30) {
-      for (const it of p.items) {
-        const key = `${it.productoId}|${it.productoNombre}`;
-        const prev = prodMap.get(key) ?? { nombre: it.productoNombre, cantidad: 0, monto: 0 };
-        prev.cantidad += it.cantidad;
-        prev.monto += (it.precioUnitario ?? 0) * it.cantidad;
-        prodMap.set(key, prev);
+        // 5. Preparar Top 3 Total
+        this.top3Total = this.topProductos30Dias
+          .slice(0, 3)
+          .reduce((s, t) => s + (t.monto || 0), 0);
+
+
+        // 6. MAPEAR Y PREPARAR TU NUEVA TABLA DE SUCURSALES
+        // Asignamos el ranking basándonos en el orden que ya trae la query (DESC)
+        this.ventasSucursalForDisplay = resultados.ventasSucursal.map((s, i) => ({
+          nombreSucursal: s.nombreSucursal,
+          montoTotal: s.montoTotalVentas,
+          rank: i + 1 // Add rank for display
+        }));
+
+
+        // 6. Construir los gráficos
+        this.buildTopProductsCharts();
+        this.buildLineChartMock(); // Temporal hasta tener el endpoint real
+
+        this.datosCargados = true;
+      },
+      error: (err) => {
+        console.error('Error cargando estadísticas', err);
+        alert('No se pudieron cargar las métricas desde el servidor.');
       }
-    }
-    const arr = Array.from(prodMap.values());
-    arr.sort((a, b) => b.cantidad - a.cantidad);
-    this.topProductos30Dias = arr;
-
-    // calcular total de los top 3 (monto)
-    this.top3Total = this.topProductos30Dias
-      .slice(0, 3)
-      .reduce((s, t) => s + (t.monto || 0), 0);
-
-    // preparar el array que usará la plantilla (top 10 con rank)
-    this.topProductsForDisplay = this.topProductos30Dias
-      .slice(0, 10)
-      .map((t, i) => ({ nombre: t.nombre, cantidad: t.cantidad, monto: t.monto ?? 0, rank: i + 1 }));
-
-    // If no price info, we still can rank by cantidad; ensure arrays not empty
-  }
-
-  private buildLineChart() {
-    // Build simple weekly aggregation for last 6 weeks
-    const weeks = 6;
-    const labels: string[] = [];
-    const values: number[] = [];
-    const now = new Date();
-    for (let w = weeks - 1; w >= 0; w--) {
-      const start = new Date(now);
-      start.setDate(now.getDate() - (w * 7));
-      const label = `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
-      labels.push(label);
-      // sum sales in that week (approx)
-      const weekStart = new Date(start);
-      weekStart.setDate(start.getDate() - 6); // 7-day window
-      const weekEnd = new Date(start);
-      const total = this.pedidosMock
-        .filter(p => {
-          const d = new Date(p.fecha);
-          return d >= weekStart && d <= weekEnd;
-        })
-        .reduce((s, p) => s + p.total, 0);
-      values.push(total);
-    }
-
-    this.lineSalesData = {
-      labels,
-      datasets: [
-        {
-          data: values,
-          label: 'Ventas (ARS)',
-          fill: true,
-          tension: 0.35,
-          borderColor: '#d81b27',
-          backgroundColor: 'rgba(216,27,39,0.12)',
-          pointRadius: 4
-        }
-      ]
-    };
+    });
   }
 
   private buildTopProductsCharts() {
-    // top 5 products by quantity
     const top = this.topProductos30Dias.slice(0, 5);
     const labels = top.map(t => t.nombre);
     const quantities = top.map(t => t.cantidad);
-    const amounts = top.map(t => Math.round(t.monto));
+    
+    // Ahora podemos usar los montos reales para el gráfico de dona
+    const amounts = top.map(t => Math.round(t.monto)); 
 
     this.barTopProductsData = {
       labels,
-      datasets: [
-        {
-          data: quantities,
-          label: 'Unidades vendidas',
-          backgroundColor: '#d81b27'
-        }
-      ]
+      datasets: [{ data: quantities, label: 'Unidades vendidas', backgroundColor: '#d81b27' }]
     };
 
     this.doughnutData = {
       labels,
-      datasets: [
-        {
-          data: amounts,
-          backgroundColor: [
-            '#d81b27',
-            '#ff6b6b',
-            '#ff9f89',
-            '#ffb3a7',
-            '#ffd1c1'
-          ]
-        }
-      ]
+      datasets: [{
+        data: amounts,
+        backgroundColor: ['#d81b27', '#ff6b6b', '#ff9f89', '#ffb3a7', '#ffd1c1']
+      }]
     };
   }
 
-  // utility: build mock orders for demo (replace with real api)
-  private buildMockPedidos(): StatPedido[] {
-    // build a small dataset across many dates and products
-    const mockProducts = [
-      { id: 1, nombre: 'Jamón y Queso', precio: 2500 },
-      { id: 2, nombre: 'Pollo', precio: 2900 },
-      { id: 3, nombre: 'Vegetariano', precio: 2700 },
-      { id: 4, nombre: 'Atún', precio: 2800 },
-      { id: 5, nombre: 'Milanesa', precio: 3000 }
-    ];
+  // Se mantiene solo como puente visual hasta que programes el backend
+  private buildLineChartMock() {
+    const labels = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5', 'Semana 6'];
+    const values = [0, 0, 0, 0, 0, 0]; // Todo en cero hasta que esté el backend real
 
-    const pedidos: StatPedido[] = [];
-    const now = new Date();
-
-    let counter = 100;
-    // create 60 random orders across last 45 days
-    for (let i = 0; i < 60; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - Math.floor(Math.random() * 45)); // up to 45 days ago
-      const itemsCount = Math.floor(Math.random() * 3) + 1;
-      const items = [];
-      let total = 0;
-      for (let j = 0; j < itemsCount; j++) {
-        const prod = mockProducts[Math.floor(Math.random() * mockProducts.length)];
-        const qty = Math.floor(Math.random() * 3) + 1;
-        items.push({ productoId: prod.id, productoNombre: prod.nombre, cantidad: qty, precioUnitario: prod.precio });
-        total += prod.precio * qty;
-      }
-      pedidos.push({
-        id: ++counter,
-        fecha: d.toISOString(),
-        clienteNombre: ['Juan', 'María', 'ACME', 'Lucía', 'Pedro'][Math.floor(Math.random() * 5)],
-        total,
-        items
-      });
-    }
-    return pedidos;
+    this.lineSalesData = {
+      labels,
+      datasets: [{
+        data: values, label: 'Ventas (ARS)', fill: true, tension: 0.35,
+        borderColor: '#d81b27', backgroundColor: 'rgba(216,27,39,0.12)', pointRadius: 4
+      }]
+    };
   }
-
 }

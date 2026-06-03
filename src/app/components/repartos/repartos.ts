@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; // Añadido switchMap
 import { RepartosService } from '../../services/repartos-service';
+import { PedidoService } from '../../services/pedido-service';
 import { AuthService } from '../../services/auth-service';
 import { Reparto } from '../../model/reparto.model';
 import { ActionBar } from '../action-bar/action-bar';
@@ -25,6 +26,7 @@ export class Repartos implements OnInit {
   // 1. INYECCIÓN DE DEPENDENCIAS
   // ==========================================
   private repartosService = inject(RepartosService);
+  private pedidoService = inject(PedidoService);
   private modalService = inject(NgbModal);
   private auth = inject(AuthService);
   private fb = inject(FormBuilder);
@@ -55,6 +57,12 @@ export class Repartos implements OnInit {
 
   // Modal de alta de reparto
   repartoForm: FormGroup;
+
+  // --- VARIABLES PARA ASIGNACIÓN DE PEDIDO A REPARTO ---
+  pedidosDisponibles: any[] = []; 
+  pedidosSeleccionados: Set<number> = new Set<number>();
+  repartoActivoId: number | null = null;
+  cargandoPedidos = false;
 
   // ==========================================
   // 3. CONSTRUCTOR Y CICLO DE VIDA
@@ -121,7 +129,7 @@ export class Repartos implements OnInit {
     this.modalService.open(content, { centered: true, size: 'lg' });
   }
 
-  // Modal de Alta - Manejo inteligente con ng-bootstrap
+  // Modal de Alta 
   openModal(modalTemplate: any) {
     const modalRef = this.modalService.open(modalTemplate, { size: 'lg', centered: true });
 
@@ -170,6 +178,69 @@ export class Repartos implements OnInit {
       this.repartoForm.markAllAsTouched();
       alert('Por favor, completa el nombre del reparto.');
     }
+  }
+
+  //Modal asignar pedido a reparto
+  
+  // 1. Abre el modal y carga los datos frescos
+  abrirModalAsignacion(modalTemplate: any, idReparto: number) {
+    this.repartoActivoId = idReparto;
+    this.pedidosSeleccionados.clear(); // Limpiamos selecciones anteriores
+    this.pedidosDisponibles = []; // Limpiamos la tabla
+    this.cargandoPedidos = true;
+
+    //Abrir modal con angular
+    this.modalService.open(modalTemplate, { size: 'lg', centered: true, scrollable: true });
+
+    // Llamamos al servicio que creaste (Ajusta el nombre del método según tu servicio)
+    this.pedidoService.getPedidosDisponibles().subscribe({
+      next: (pedidos) => {
+        this.pedidosDisponibles = pedidos;
+        this.cargandoPedidos = false;
+      },
+      error: (err) => {
+        console.error('Error cargando pedidos disponibles', err);
+        this.cargandoPedidos = false;
+      }
+    });
+  }
+
+  // 2. Maneja el clic en cada checkbox
+  toggleSeleccionPedido(idPedido: number) {
+    if (this.pedidosSeleccionados.has(idPedido)) {
+      this.pedidosSeleccionados.delete(idPedido); // Si ya estaba, lo quitamos
+    } else {
+      this.pedidosSeleccionados.add(idPedido);    // Si no estaba, lo agregamos
+    }
+  }
+
+  // 3. Envía los datos al backend
+  guardarAsignacion() {
+    if (this.pedidosSeleccionados.size === 0 || !this.repartoActivoId) {
+      alert('Debes seleccionar al menos un pedido.');
+      return;
+    }
+
+    // Convertimos el Set a un Array normal para enviarlo en el JSON
+    const pedidosIds = Array.from(this.pedidosSeleccionados);
+
+    // Llama a tu método del backend para asignar (Ajusta los nombres)
+    this.repartosService.asignarPedidos(this.repartoActivoId, pedidosIds).subscribe({
+      next: (res) => { 
+        this.closeModal(); // Asegura que el modal se cierre
+        // Recarga la tabla principal de repartos para actualizar los números
+        this.refresh$.next();
+
+        // Alert con pequeño retraso para no bloquear la animación de cierre
+          setTimeout(() => {
+            alert('¡Pedidos asignados con éxito!');
+          }, 300);
+      },
+      error: (err) => {
+        console.error('Error al asignar', err);
+        alert('Hubo un error al asignar los pedidos.');
+      }
+    });
   }
 
   // ==========================================

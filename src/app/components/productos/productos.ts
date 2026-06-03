@@ -5,7 +5,7 @@ import { BehaviorSubject, Observable, switchMap } from 'rxjs';
 import { Producto } from '../../model/producto.model';
 import { ActionBar } from '../action-bar/action-bar';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { CategoriaService } from '../../services/categoria-service';
 import { InsumosService } from '../../services/insumos-service';
 
@@ -17,7 +17,7 @@ interface ItemInsumoReceta {
 
 @Component({
   selector: 'app-productos',
-  imports: [CommonModule, ActionBar, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ActionBar, ReactiveFormsModule, FormsModule, NgbModule],
   templateUrl: './productos.html',
   styleUrl: './productos.css'
 })
