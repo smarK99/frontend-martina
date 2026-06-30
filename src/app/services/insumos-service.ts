@@ -14,4 +14,16 @@ export class InsumosService {
   getAll(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/insumo`);
   }
+
+  delete(id: any): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/insumo/borrar/${id}`);
+  }
+
+  create(insumo: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/insumo/crear`, insumo);
+  }
+
+  update(id: any, insumo: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/insumo/${id}`, insumo);
+  }
 }

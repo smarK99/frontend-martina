@@ -1,0 +1,110 @@
+<div class="card p-4 shadow-sm border-0">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-secondary"><i class="bi bi-box-seam me-2"></i> Listado de Insumos</h5>
+        
+        <div class="input-group" style="width: 250px;">
+            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" placeholder="Buscar insumo...">
+        </div>
+    </div>
+
+    @if (cargando) {
+        <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <div class="mt-2 text-muted">Cargando insumos...</div>
+        </div>
+    } @else if (insumos.length === 0) {
+        <div class="alert alert-info text-center py-4">
+            <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+            No hay insumos registrados en el sistema.
+        </div>
+    } @else {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Nombre del Insumo</th>
+                        <th>Descripción</th>
+                        <th>Precio de Compra</th>
+                        <th class="text-end" style="width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (insumo of insumos; track insumo.id) {
+                    <tr>
+                        <td class="text-muted fw-bold">#{{ insumo.id }}</td>
+                        <td class="fw-semibold">{{ insumo.nombreInsumo }}</td>
+                        <td class="text-muted">{{ insumo.descripcionInsumo || 'Sin descripción' }}</td>
+                        <td class="fw-semibold text-success">${{ insumo.precioCompraInsumo | number:'1.2-2' }}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-2" 
+                                    title="Modificar"
+                                    (click)="editarInsumo(insumo)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    title="Eliminar"
+                                    (click)="eliminarInsumo(insumo.id)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<ng-template #insumoModal let-modal>
+    <div class="modal-header modal-header-red text-white">
+        <h5 class="modal-title">
+            <i class="bi bi-box-seam me-2"></i>
+            @if (insumoEnEdicion) {
+                Editar Insumo #{{ insumoEnEdicion.id }}
+            } @else {
+                Nuevo Insumo
+            }
+        </h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+    </div>
+
+    <div class="modal-body">
+        <form [formGroup]="insumoForm">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Nombre del Insumo <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="nombreInsumo" placeholder="Ej: Pan Francés">
+                
+                @if (insumoForm.get('nombreInsumo')?.invalid && insumoForm.get('nombreInsumo')?.touched) {
+                    <div class="text-danger small mt-1">El nombre es obligatorio.</div>
+                }
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Descripción</label>
+                <textarea class="form-control" formControlName="descripcionInsumo" rows="3" placeholder="Detalle opcional del insumo..."></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Precio de Compra <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-secondary">$</span>
+                    <input type="number" class="form-control" formControlName="precioCompraInsumo" placeholder="0.00" min="0" step="0.01">
+                </div>
+                
+                @if (insumoForm.get('precioCompraInsumo')?.invalid && insumoForm.get('precioCompraInsumo')?.touched) {
+                    <div class="text-danger small mt-1">El precio es obligatorio y debe ser un valor válido.</div>
+                }
+            </div>
+        </form>
+    </div>
+
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarInsumo()">
+            @if (insumoEnEdicion) { Guardar Cambios } @else { Crear Insumo }
+        </button>
+    </div>
+</ng-template>

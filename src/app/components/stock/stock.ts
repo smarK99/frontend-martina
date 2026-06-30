@@ -96,7 +96,7 @@ export class Stock {
     );
 
     this.conteoForm = this.fb.group({
-      idUsuario: [1, Validators.required], // ID del empleado logueado
+      idUsuario: [2, Validators.required], // ID del empleado logueado
       descripcion: ['']
     });
   }

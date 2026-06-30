@@ -1,15 +1,14 @@
 <app-action-bar title="Gestión de Stock">
 
-  <div class="dropdown">
-    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
-      aria-expanded="false">
+  <div ngbDropdown class="d-inline-block">
+    <button class="btn btn-outline-secondary" id="dropdownGestionar" ngbDropdownToggle>
       Gestionar...
     </button>
-    <ul class="dropdown-menu">
-      <li><a class="dropdown-item" href="#">Categorías</a></li>
-      <li><a class="dropdown-item" href="#">Insumos</a></li>
-      <li><a class="dropdown-item" href="#">Productos</a></li>
-    </ul>
+    <div ngbDropdownMenu aria-labelledby="dropdownGestionar">
+      <button ngbDropdownItem>Categorías</button>
+      <button ngbDropdownItem>Insumos</button>
+      <button ngbDropdownItem>Productos</button>
+    </div>
   </div>
   <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal(conteoModal)"
     title="Crear nuevo conteo">
