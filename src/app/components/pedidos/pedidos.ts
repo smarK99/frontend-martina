@@ -100,8 +100,8 @@ export class Pedidos implements OnInit {
         let list: any[] = [];
 
         if (!role) return [];
-        else if (role === 'admin') list = pedidos.slice();
-        else if (role === 'cliente') list = pedidos.filter(p => p.sucursal.id === this.CURRENT_CLIENT_ID);
+        else if (role === 'ROLE_ADMIN') list = pedidos.slice();
+        else if (role === 'ROLE_CLIENTE') list = pedidos.filter(p => p.sucursal.id === this.CURRENT_CLIENT_ID);
         else list = pedidos.slice();
 
         if (q) {

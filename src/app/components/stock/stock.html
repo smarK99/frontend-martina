@@ -30,7 +30,7 @@
         </button>
       </div>
     </div> @if (role$ | async; as role) {
-      @if (role === "admin" || role === "empleado") {
+     @if (tieneAcceso(role)) {
         @if (visibleCounts$ | async; as counts) {
           @if (counts.length === 0) {
             <div class="alert alert-info shadow-sm">No hay conteos para mostrar.</div>

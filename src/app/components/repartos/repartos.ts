@@ -87,12 +87,12 @@ export class Repartos implements OnInit {
         // 1) Base según rol
         let list: Reparto[] = [];
         if (!role) return [];
-        if (role === 'admin') {
+        if (role === 'ROLE_ADMIN') {
           list = repartos.slice();
-        } else if (role === 'empleado') {
+        } else if (role === 'ROLE_EMPLEADO') {
           // si el empleado es repartidor, ver solo sus repartos
           list = repartos.filter(r => r.usuario.idUsuario === this.CURRENT_REPARTIDOR_ID);
-        } else if (role === 'cliente') {
+        } else if (role === 'ROLE_CLIENTE') {
           // cliente ve repartos que contienen sus pedidos
           list = repartos.filter(r => r.pedidosList.some(p => p.sucursal.id === this.CURRENT_CLIENT_ID));
         } else {

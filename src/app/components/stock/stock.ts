@@ -78,7 +78,7 @@ export class Stock {
         const q = (filter || '').trim().toLowerCase();
 
         // Si no tiene rol o no es admin/empleado, devolver vacío
-        if (!(role === 'admin' || role === 'empleado')) return [];
+        if (!(role === 'ROLE_ADMIN' || role === 'ROLE_EMPLEADO')) return [];
 
         // lista base (todos los conteos) ordenada por fecha
         let list = counts.slice();
@@ -261,5 +261,12 @@ totalValue(): number {
   // Redondear a 2 decimales
   return Math.round(total * 100) / 100;
 }
+
+tieneAcceso(rolUsuario: string | null): boolean {
+    if (!rolUsuario) return false;
+    const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', ''); // Lo pasa a mayúsculas y le saca el ROLE_ si lo tiene
+    return rolLimpio === 'ADMIN' || rolLimpio === 'EMPLEADO';
+  }
+
 
 }
