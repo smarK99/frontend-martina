@@ -15,5 +15,17 @@ export class CategoriaService {
     return this.http.get<any[]>(`${this.baseUrl}/categoria`);
   }
 
+  delete(id: any): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/categoria/borrar/${id}`);
+  }
+
+  create(categoria: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/categoria/crear`, categoria);
+  }
+
+  update(id: any, categoria: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/categoria/${id}`, categoria);
+  }
+
 }
 

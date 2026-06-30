@@ -16,7 +16,7 @@ export interface Categoria {
 export interface Insumo {
   id?: number;
   nombreInsumo: string;
-  descipcionInsumo: string;
+  descripcionInsumo: string;
   precioCompraInsumo: number;
   fechaHoraAltaInsumo?: string;
   fechaHoraBajaInsumo?: string | null;

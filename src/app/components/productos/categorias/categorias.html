@@ -58,3 +58,43 @@
         </div>
     }
 </div>
+
+<!-- Modal para alta/edición de categoría -->
+<ng-template #categoriaModal let-modal>
+    <div class="modal-header modal-header-red text-white">
+        <h5 class="modal-title">
+            <i class="bi bi-tags me-2"></i>
+            @if (categoriaEnEdicion) {
+                Editar Categoría #{{ categoriaEnEdicion.id }}
+            } @else {
+                Nueva Categoría
+            }
+        </h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+    </div>
+
+    <div class="modal-body">
+        <form [formGroup]="categoriaForm">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Nombre de la Categoría <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" formControlName="nombreCategoria" placeholder="Ej: Sándwiches Triples">
+                
+                @if (categoriaForm.get('nombreCategoria')?.invalid && categoriaForm.get('nombreCategoria')?.touched) {
+                    <div class="text-danger small mt-1">El nombre es obligatorio.</div>
+                }
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Descripción</label>
+                <textarea class="form-control" formControlName="descripcionCategoria" rows="3" placeholder="Detalle opcional de la categoría..."></textarea>
+            </div>
+        </form>
+    </div>
+
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarCategoria()">
+            @if (categoriaEnEdicion) { Guardar Cambios } @else { Crear Categoría }
+        </button>
+    </div>
+</ng-template>

@@ -63,11 +63,11 @@ export class Productos {
         console.log('Abriendo modal producto...');
         break;
       case 'CATEGORIAS':
-        //this.categoriasGestion?.openModal('nuevaCategoria');
+        this.categoriasGestion?.abrirModalAltaCategoria();
         console.log('Abriendo modal categoría...');
         break;
       case 'INSUMOS':
-        //this.insumosGestion?.openModal('nuevoInsumo');
+        this.insumosGestion?.abrirModalAltaInsumo();
         console.log('Abriendo modal insumo...');
         break;
     }
