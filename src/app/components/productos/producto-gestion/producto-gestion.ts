@@ -7,6 +7,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } 
 import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { CategoriaService } from '../../../services/categoria-service';
 import { InsumosService } from '../../../services/insumos-service';
+import { AuthService } from '../../../services/auth-service'; // <-- Importamos la seguridad
 
 interface ItemInsumoReceta {
   insumoId: number;
@@ -20,23 +21,23 @@ interface ItemInsumoReceta {
   templateUrl: './producto-gestion.html',
   styleUrl: './producto-gestion.css'
 })
-
 export class ProductoGestion {
+  
+  // --- INYECCIONES DE SERVICIOS ---
   private categoriaService = inject(CategoriaService);
   private insumoService = inject(InsumosService);
+  private authService = inject(AuthService); // <-- Inyectamos el patovica
+
+  // Exponemos el rol para que el HTML pueda leerlo
+  role$ = this.authService.role$;
+
   @ViewChild('altaProductoModal') modalAltaProducto!: TemplateRef<any>;
 
   productos: Producto[] = [];
-  //Insumos disponibles para agregar al producto. Se llena al abrir el modal, con el servicio de insumos
   insumosDisponibles: any[] = [];
-
-  //Lista de categorias para el select del producto
   categoriasDisponibles: any[] = [];
-
-  // La lista que se va llenando en la tabla
   insumosDelProducto: ItemInsumoReceta[] = [];
 
-  // Variables para el ngModel temporal
   tempInsumoId: number | null = null;
   tempCantidadInsumo: number = 1;
 
@@ -47,13 +48,6 @@ export class ProductoGestion {
   productos$!: Observable<any[]>;
 
   constructor(private productoService: ProductoService, private fb: FormBuilder, private modalService: NgbModal) {
-
-    // Observable principal de pedidos, se recarga cada vez que "refresh$" emite señal
-    // this.productos$ = this.refresh$.pipe(
-    //   switchMap(() => this.productoService.getAll())
-    // );
-
-    // Definimos el formulario específico de Productos
     this.productoForm = this.fb.group({
       nombre: ['', Validators.required],
       descripcion: [''],
@@ -185,4 +179,27 @@ export class ProductoGestion {
       alert('Por favor, completa todos los campos obligatorios del formulario principal.');
     }
   }
+
+
+  // --- HELPER PARA IMÁGENES DINÁMICAS ---
+  getImagenProducto(nombreProducto: string): string {
+    if (!nombreProducto) return '/assets/martina-logo.png';
+    
+    const nombre = nombreProducto.toLowerCase();
+    
+    if (nombre.includes('cocido')) {
+      return '/assets/jcocido.jpg';
+    } else if (nombre.includes('crudo')) {
+      return '/assets/jcrudo.jpg';
+    } else if (nombre.includes('salame')) {
+      return '/assets/salame-verdura.jpg';
+    } else if (nombre.includes('jyq')) {
+      return '/assets/jcocido.jpg';
+    }
+    
+    // Fallback: Si no es ninguno de los 3, muestra el logo por defecto
+    return '/assets/martina-logo.png';
+  }
+
+
 }

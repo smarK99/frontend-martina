@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#d81b27;">
     <div class="container">
-        <a class="navbar-brand d-flex align-items-center" [routerLink]="['/productos']">
+        <a class="navbar-brand d-flex align-items-center" routerLink="/productos">
             <span class="logo-dot me-2"></span>
             <strong>Martina Sandwichs</strong>
         </a>
@@ -11,40 +11,57 @@
 
         <div id="mainNav" class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-2">
+                
                 <li class="nav-item">
                     <a routerLink="/productos" routerLinkActive="active" class="nav-link">
                         <i class="bi bi-bag"></i> Productos
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a routerLink="/pedidos" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-receipt"></i> Pedidos
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a routerLink="/stock" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-box-seam"></i> Stock
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a routerLink="/repartos" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-truck"></i> Repartos
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a routerLink="/estadisticas" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-graph-up"></i> Estadísticas
-                    </a>
-                </li>
+
+                @if (role$ | async; as role) {
+                    
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO' || role === 'ROLE_EMPLEADO' || role === 'ROLE_CLIENTE') {
+                    <li class="nav-item">
+                        <a routerLink="/pedidos" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-receipt"></i> Pedidos
+                        </a>
+                    </li>
+                    }
+
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO' || role === 'ROLE_STOCK') {
+                    <li class="nav-item">
+                        <a routerLink="/stock" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-box-seam"></i> Stock
+                        </a>
+                    </li>
+                    }
+
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO' || role === 'ROLE_REPARTIDOR') {
+                    <li class="nav-item">
+                        <a routerLink="/repartos" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-truck"></i> Repartos
+                        </a>
+                    </li>
+                    }
+
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO') {
+                    <li class="nav-item">
+                        <a routerLink="/estadisticas" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-graph-up"></i> Estadísticas
+                        </a>
+                    </li>
+                    }
+                }
 
                 <li class="nav-item ms-lg-3 d-flex align-items-center">
-                    @if (role$ | async; as role) {
+                    @if (displayRole$ | async; as displayRole) {
                     <span class="role-badge me-2">
-                        Rol: {{ role }}
+                        Rol: {{ displayRole }}
                     </span>
                     }
+                    
                     @if (!(isLoggedIn$ | async)) {
-                    <button class="btn btn-light btn-sm" (click)="openLoginModal(loginContent)">
+                    <button class="btn btn-light btn-sm" routerLink="/login">
                         <i class="bi bi-box-arrow-in-right"></i> Login
                     </button>
                     } @else {
@@ -52,35 +69,9 @@
                         <i class="bi bi-box-arrow-right"></i> Logout
                     </button>
                     }
-                </li>        
+                </li>  
 
             </ul>
         </div>
     </div>
 </nav>
-
-<!-- Modal definido como ng-template -->
-<ng-template #loginContent let-modal>
-  <div class="modal-header">
-    <h5 class="modal-title">Login (demo)</h5>
-    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
-  </div>
-  <div class="modal-body">
-    <div class="mb-3">
-      <label class="form-label">Usuario</label>
-      <input class="form-control" [(ngModel)]="loginUser" name="loginUser" />
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Rol</label>
-      <select class="form-select" [(ngModel)]="loginRole" name="loginRole">
-        <option value="admin">admin</option>
-        <option value="cliente">cliente</option>
-        <option value="empleado">empleado</option>
-      </select>
-    </div>
-    <div class="small text-muted">* Demo sin backend</div>
-  </div>
-  <div class="modal-footer">
-    <button class="btn btn-danger" (click)="loginFromModal(modal)">Ingresar</button>
-  </div>
-</ng-template>

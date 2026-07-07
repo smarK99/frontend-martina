@@ -84,19 +84,19 @@ export class Repartos implements OnInit {
       map(([repartos, role, filter]) => {
         const q = (filter || '').trim().toLowerCase();
 
-        // 1) Base según rol
+        // 1) Base según rol (Usando nomenclatura de Spring Security)
         let list: Reparto[] = [];
         if (!role) return [];
-        if (role === 'admin') {
+
+        if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO') {
+          // Ven absolutamente todos los repartos
           list = repartos.slice();
-        } else if (role === 'empleado') {
-          // si el empleado es repartidor, ver solo sus repartos
+        } else if (role === 'ROLE_REPARTIDOR') {
+          // El repartidor ve exclusivamente los suyos
           list = repartos.filter(r => r.usuario.idUsuario === this.CURRENT_REPARTIDOR_ID);
-        } else if (role === 'cliente') {
-          // cliente ve repartos que contienen sus pedidos
-          list = repartos.filter(r => r.pedidosList.some(p => p.sucursal.id === this.CURRENT_CLIENT_ID));
         } else {
-          list = repartos.slice();
+          // Cualquier otro rol (como ROLE_CLIENTE o ROLE_STOCK) no ve nada acá
+          return [];
         }
 
         // 2) aplicar filtro si hay (por repartidor, cliente o id)

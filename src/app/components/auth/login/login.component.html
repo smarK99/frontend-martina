@@ -1,0 +1,81 @@
+<div class="login-wrapper d-flex align-items-center justify-content-center">
+  <div class="card login-card shadow-lg border-0">
+    <div class="card-body p-5">
+      
+      <div class="text-center mb-4">
+        <div class="brand-circle mb-3 mx-auto">
+          <i class="bi bi-shop text-white fs-1"></i>
+        </div>
+        <h3 class="fw-bold text-danger">Martina Sandwichs</h3>
+        <p class="text-muted small">Ingresá tus credenciales para acceder al panel</p>
+      </div>
+
+      @if (mensajeError) {
+        <div class="alert alert-danger d-flex align-items-center animate__animated animate__shakeX" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+          <div>{{ mensajeError }}</div>
+        </div>
+      }
+
+      <form #loginForm="ngForm" (ngSubmit)="onLogin(loginForm)" novalidate>
+        
+        <div class="mb-3">
+          <label for="username" class="form-label fw-semibold text-secondary">Usuario</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light"><i class="bi bi-person text-secondary"></i></span>
+            <input type="text" class="form-control" id="username" name="username"
+                   [(ngModel)]="loginUsuario.username"
+                   #username="ngModel" required minlength="4"
+                   [ngClass]="{'is-invalid': username.invalid && (username.dirty || username.touched)}"
+                   placeholder="ej: flavio74">
+          </div>
+          @if (username.invalid && (username.dirty || username.touched)) {
+            <div class="text-danger mt-1 small ms-1">
+              @if (username.errors?.['required']) { <span><i class="bi bi-asterisk"></i> El usuario es obligatorio.</span> }
+              @if (username.errors?.['minlength']) { <span><i class="bi bi-info-circle"></i> Debe tener al menos 4 letras.</span> }
+            </div>
+          }
+        </div>
+
+       <div class="mb-4">
+          <label for="password" class="form-label fw-semibold text-secondary">Contraseña</label>
+          
+          <div class="input-group-united" [ngClass]="{'is-invalid-group': password.invalid && (password.dirty || password.touched)}">
+            <span class="input-group-text-united bg-light"><i class="bi bi-lock text-secondary"></i></span>
+            
+            <input [type]="mostrarPassword ? 'text' : 'password'" 
+                   class="form-control-united" 
+                   id="password" name="password"
+                   [(ngModel)]="loginUsuario.password"
+                   #password="ngModel" required
+                   >
+                  <!-- placeholder="••••••••" Si quiero agregar algo de ejemplo-->
+
+            <button class="password-toggle-custom" 
+                    type="button" 
+                    (click)="mostrarPassword = !mostrarPassword"
+                    tabindex="-1"
+                    title="{{ mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña' }}">
+              <i class="bi" [ngClass]="mostrarPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+            </button>
+          </div>
+          
+          @if (password.invalid && (password.dirty || password.touched)) {
+            <div class="text-danger mt-1 small ms-1 animate__animated animate__fadeIn">
+              @if (password.errors?.['required']) { <span><i class="bi bi-asterisk"></i> La contraseña es obligatoria.</span> }
+            </div>
+          }
+        </div>
+        <button type="submit" class="btn btn-danger w-100 py-2 fw-bold" [disabled]="isLoading">
+          @if (isLoading) {
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Validando datos...
+          } @else {
+            <i class="bi bi-box-arrow-in-right me-2"></i> Ingresar
+          }
+        </button>
+        
+      </form>
+    </div>
+  </div>
+</div>

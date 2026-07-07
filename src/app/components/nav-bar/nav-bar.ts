@@ -1,48 +1,31 @@
 import { Component, inject } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
-import { Observable } from 'rxjs';
-import { FormsModule } from '@angular/forms';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-
+import { map } from 'rxjs'; // <-- Importamos map
 
 @Component({
   selector: 'app-nav-bar',
-  imports: [CommonModule, RouterModule, FormsModule],
+  standalone: true,
+  imports: [CommonModule, RouterModule],
   templateUrl: './nav-bar.html',
-  styleUrl: './nav-bar.css'
+  styleUrls: ['./nav-bar.css']
 })
 export class NavBar {
-  private modalService = inject(NgbModal);
-  private auth = inject(AuthService);
+  
+  private authService = inject(AuthService);
   private router = inject(Router);
 
-  role$: Observable<string | null> = this.auth.role$;
-  isLoggedIn$: Observable<boolean> = this.auth.isLoggedIn$;
+  role$ = this.authService.role$;
+  isLoggedIn$ = this.authService.isLoggedIn$;
 
-  loginUser = '';
-  loginRole: 'admin' | 'cliente' | 'empleado' = 'cliente';
-
-  openLoginModal(content: any) {
-    // centered: true centra el modal; size: 'sm'|'lg' opcional
-    this.modalService.open(content, { centered: true, size: 'md' });
-  }
-
-  loginFromModal(modalRef: any) {
-    // validar si hace falta
-    this.auth.loginAs(this.loginRole, this.loginUser || undefined);
-    modalRef.close(); // cierra el modal
-    if (this.loginRole === 'cliente') this.router.navigate(['/pedidos']);
-    else this.router.navigate(['/productos']);
-  }
-
-  goLogin() {
-    this.router.navigate(['/login']);
-  }
+  // Creamos un observable exclusivo para la UI que limpia el texto
+  displayRole$ = this.role$.pipe(
+    map(role => role ? role.replace('ROLE_', '') : '')
+  );
 
   logout() {
-    this.auth.logout();
-    this.router.navigate(['/productos']);
+    this.authService.logout();
+    this.router.navigate(['/productos']); 
   }
 }

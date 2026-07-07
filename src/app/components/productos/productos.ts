@@ -1,12 +1,12 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProductoGestion } from './producto-gestion/producto-gestion';
 import { Categorias } from './categorias/categorias';
 import { Insumos } from './insumos/insumos';
 import { ActionBar } from "../action-bar/action-bar";
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { AuthService } from '../../services/auth-service'; // <-- Importamos el motor de seguridad
 
-// Definimos los tipos de vistas posibles
 type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
 
 @Component({
@@ -16,19 +16,18 @@ type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
   templateUrl: './productos.html',
   styleUrl: './productos.css'
 })
-
 export class Productos {
 
-  //Declaracion de los hijos
+  // Inyectamos el servicio para saber quién está mirando la pantalla
+  private authService = inject(AuthService);
+  role$ = this.authService.role$;
+
   @ViewChild('productosGestion') productosGestion!: ProductoGestion;
   @ViewChild('categoriasGestion') categoriasGestion!: Categorias;
   @ViewChild('insumosGestion') insumosGestion!: Insumos;
   
-  // Por defecto, arrancamos viendo los sándwiches
   vistaActual: VistaActiva = 'PRODUCTOS';
 
-  // --- GETTERS DINÁMICOS PARA LA UI ---
-  
   get tituloPantalla(): string {
     switch (this.vistaActual) {
       case 'PRODUCTOS': return 'Gestión de Productos';
@@ -49,26 +48,20 @@ export class Productos {
     }
   }
 
-  // --- MÉTODOS DE ACCIÓN ---
-
   cambiarVista(nuevaVista: VistaActiva) {
     this.vistaActual = nuevaVista;
   }
 
   ejecutarAccionPrincipal() {
-    // Aquí decides qué modal abrir según dónde esté parado el usuario
     switch (this.vistaActual) {
       case 'PRODUCTOS':
         this.productosGestion?.abrirModalAltaProducto();
-        console.log('Abriendo modal producto...');
         break;
       case 'CATEGORIAS':
         this.categoriasGestion?.abrirModalAltaCategoria();
-        console.log('Abriendo modal categoría...');
         break;
       case 'INSUMOS':
         this.insumosGestion?.abrirModalAltaInsumo();
-        console.log('Abriendo modal insumo...');
         break;
     }
   }

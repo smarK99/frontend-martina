@@ -1,41 +1,42 @@
-<app-action-bar title="Gestión de Stock">
-
-  <div ngbDropdown class="d-inline-block">
-    <button class="btn btn-outline-secondary" id="dropdownGestionar" ngbDropdownToggle>
-      Gestionar...
-    </button>
-    <div ngbDropdownMenu aria-labelledby="dropdownGestionar">
-      <button ngbDropdownItem>Categorías</button>
-      <button ngbDropdownItem>Insumos</button>
-      <button ngbDropdownItem>Productos</button>
-    </div>
-  </div>
-  <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal(conteoModal)"
-    title="Crear nuevo conteo">
-    <i class="bi bi-plus-lg"></i> Nuevo conteo
-  </button>
-</app-action-bar>
-
-<section class="py-4">
-  <div class="container">
+@if (role$ | async; as role) {
+  @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO' || role === 'ROLE_STOCK') {
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="h4 mb-0">Conteos de Stock</h2>
-
-      <div class="d-flex gap-2 align-items-center">
-        <input type="search" class="form-control form-control-sm" placeholder="Buscar por empleado, producto o id..."
-          (input)="onStockFilterChange($any($event.target).value)" style="min-width: 240px" />
-        <button class="btn btn-sm btn-outline-secondary" (click)="onStockFilterChange('')">
-          Buscar
+    <app-action-bar title="Gestión de Stock">
+      <div ngbDropdown class="d-inline-block">
+        <button class="btn btn-outline-secondary" id="dropdownGestionar" ngbDropdownToggle>
+          Gestionar...
         </button>
+        <div ngbDropdownMenu aria-labelledby="dropdownGestionar">
+          <button ngbDropdownItem>Categorías</button>
+          <button ngbDropdownItem>Insumos</button>
+          <button ngbDropdownItem>Productos</button>
+        </div>
       </div>
-    </div> @if (role$ | async; as role) {
-      @if (role === "admin" || role === "empleado") {
+      <button class="btn btn-danger d-flex align-items-center gap-2 ms-2" (click)="openModal(conteoModal)"
+        title="Crear nuevo conteo">
+        <i class="bi bi-plus-lg"></i> Nuevo conteo
+      </button>
+    </app-action-bar>
+
+    <section class="py-4">
+      <div class="container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="h4 mb-0">Conteos de Stock</h2>
+
+          <div class="d-flex gap-2 align-items-center">
+            <input type="search" class="form-control form-control-sm" placeholder="Buscar por empleado o id..."
+              (input)="onStockFilterChange($any($event.target).value)" style="min-width: 240px" />
+            <button class="btn btn-sm btn-outline-secondary" (click)="onStockFilterChange('')">
+              Buscar
+            </button>
+          </div>
+        </div> 
+        
         @if (visibleCounts$ | async; as counts) {
           @if (counts.length === 0) {
             <div class="alert alert-info shadow-sm">No hay conteos para mostrar.</div>
           } @else {
-            
             <div class="table-responsive bg-white shadow-sm rounded border border-light-subtle">
               <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -62,7 +63,6 @@
                 </tbody>
               </table>
             </div>
-
           }
         } @else {
           <div class="text-center py-5 text-muted">
@@ -70,20 +70,26 @@
             Cargando conteos…
           </div>
         }
-      } @else {
-        <div class="alert alert-danger shadow-sm p-3">
-          <i class="bi bi-shield-lock-fill me-2"></i>
-          <strong>Acceso restringido:</strong> Esta sección solo es accesible por admin o empleados.
-        </div>
-      }
-    } @else {
-      <div class="alert alert-secondary shadow-sm">
-        Inicia sesión para ver los conteos de stock.
+
       </div>
-    }
-    
+    </section>
+
+  } @else {
+    <div class="container py-5 mt-5">
+      <div class="alert alert-danger shadow-sm p-4 text-center">
+        <i class="bi bi-shield-lock-fill text-danger d-block mb-3" style="font-size: 3rem;"></i>
+        <h4 class="fw-bold">Acceso restringido</h4>
+        <p class="mb-0">Esta sección es de uso exclusivo para el equipo de control de stock.</p>
+      </div>
+    </div>
+  }
+} @else {
+  <div class="container py-5 mt-5">
+    <div class="alert alert-secondary shadow-sm text-center p-4">
+      Inicia sesión para ver el módulo de stock.
+    </div>
   </div>
-</section>
+}
 
 <!-- Modal: detalle de conteo -->
 <ng-template #detailModal let-modal>
