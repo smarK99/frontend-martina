@@ -168,13 +168,6 @@ export class Estadisticas implements OnInit {
     const labels = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5', 'Semana 6'];
     const values = [0, 0, 0, 0, 0, 0]; // Todo en cero hasta que esté el backend real
 
-esAdmin(rolUsuario: string | null): boolean {
-    if (!rolUsuario) return false;
-    const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', '');
-    return rolLimpio === 'ADMIN';
-}
-
-
     this.lineSalesData = {
       labels,
       datasets: [{
@@ -182,5 +175,11 @@ esAdmin(rolUsuario: string | null): boolean {
         borderColor: '#d81b27', backgroundColor: 'rgba(216,27,39,0.12)', pointRadius: 4
       }]
     };
-  
+  }
+
+  esAdmin(rolUsuario: string | null): boolean {
+      if (!rolUsuario) return false;
+      const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', '');
+      return rolLimpio === 'ADMIN';
+  }
 }
