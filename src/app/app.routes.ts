@@ -7,6 +7,7 @@ import { Repartos } from './components/repartos/repartos';
 // Agregamos los imports correctos basados en tu estructura:
 import { LoginComponent } from './components/auth/login/login.component'; 
 import { authGuard } from './guards/auth.guard'; 
+import { Usuarios } from './components/usuarios/usuarios';
 
 export const routes: Routes = [
     { 
@@ -17,6 +18,9 @@ export const routes: Routes = [
         // La vidriera es pública, no lleva guard
         path: 'productos', 
         component: Productos 
+    },
+    { 
+        path: 'usuarios', component: Usuarios 
     },
     { 
         path: 'pedidos', 

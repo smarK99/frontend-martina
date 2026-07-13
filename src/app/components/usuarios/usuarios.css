@@ -1,0 +1,23 @@
+/* Color corporativo para las cabeceras de los modales */
+.modal-header-red {
+    background-color: #d81b27;
+    border-bottom: none;
+}
+
+/* Ajuste sutil para que los botones de acción de la tabla no tengan borde duro */
+.table .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Efecto hover suave en las filas de la tabla */
+.table-hover tbody tr:hover {
+    background-color: rgba(216, 27, 39, 0.03);
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* Asegurar que el input de búsqueda tenga un ancho mínimo amigable en móviles */
+@media (max-width: 576px) {
+    input[type="search"] {
+        min-width: 100% !important;
+    }
+}
