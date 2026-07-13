@@ -78,7 +78,7 @@ export class Stock {
         const q = (filter || '').trim().toLowerCase();
 
         // ESCUDO: Si no tiene rol o no es del equipo interno, devolver vacío
-        if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUEÑO' && role !== 'ROLE_STOCK') {
+        if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO' && role !== 'ROLE_STOCK') {
           return [];
         }
 

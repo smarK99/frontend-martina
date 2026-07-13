@@ -1,5 +1,5 @@
 @if (role$ | async; as role) {
-  @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO' || role === 'ROLE_REPARTIDOR') {
+  @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_REPARTIDOR') {
     
     <app-action-bar title="Gestión de Repartos">
       @if (role === 'ROLE_REPARTIDOR') {
@@ -7,7 +7,7 @@
           <i class="bi bi-truck"></i> Mis Repartos 
         </button>
       }
-      @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO') {
+      @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
         <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal(altaRepartoModal)">
           <i class="bi bi-plus-lg"></i> Nuevo Reparto
         </button>
@@ -47,7 +47,7 @@
                       <td>{{ r.pedidosList.length }}</td>
                       <td>{{ totalReparto(r) | currency:'ARS' }}</td>
                       <td class="text-end">
-                        @if (r.estadoReparto.nombreEstadoReparto !== 'FINALIZADO' && (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO')) {  
+                        @if (r.estadoReparto.nombreEstadoReparto !== 'FINALIZADO' && (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO')) {  
                           <button class="btn btn-sm btn-outline-success me-2" (click)="abrirModalAsignacion(asignarPedidosModal, r.id)">
                             <i class="bi bi-truck"></i> +
                           </button>

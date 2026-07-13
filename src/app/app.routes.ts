@@ -8,6 +8,7 @@ import { Repartos } from './components/repartos/repartos';
 import { LoginComponent } from './components/auth/login/login.component'; 
 import { authGuard } from './guards/auth.guard'; 
 import { Usuarios } from './components/usuarios/usuarios';
+import { roleGuard } from './guards/role.guard'; // <-- 1. Importamos el guardia
 
 export const routes: Routes = [
     { 
@@ -26,26 +27,35 @@ export const routes: Routes = [
         path: 'pedidos', 
         component: Pedidos,
         canActivate: [authGuard],
-        data: { roles: ['ROLE_ADMIN', 'ROLE_DUEÑO', 'ROLE_EMPLEADO', 'ROLE_CLIENTE'] }
+        data: { roles: ['ROLE_ADMIN', 'ROLE_DUENIO', 'ROLE_EMPLEADO', 'ROLE_CLIENTE'] }
     },
     { 
         path: 'stock', 
         component: Stock,
         canActivate: [authGuard],
-        data: { roles: ['ROLE_ADMIN', 'ROLE_DUEÑO', 'ROLE_STOCK'] }
+        data: { roles: ['ROLE_ADMIN', 'ROLE_DUENIO', 'ROLE_STOCK'] }
     },
     { 
         path: 'repartos', 
         component: Repartos,
         canActivate: [authGuard],
-        data: { roles: ['ROLE_ADMIN', 'ROLE_DUEÑO', 'ROLE_REPARTIDOR'] }
+        data: { roles: ['ROLE_ADMIN', 'ROLE_DUENIO', 'ROLE_REPARTIDOR'] }
     },
     { 
         path: 'estadisticas', 
         component: Estadisticas,
         canActivate: [authGuard],
-        data: { roles: ['ROLE_ADMIN', 'ROLE_DUEÑO'] }
+        data: { roles: ['ROLE_ADMIN', 'ROLE_DUENIO'] }
     },
     { path: '', pathMatch: 'full', redirectTo: 'productos' },
-    { path: '**', redirectTo: 'productos' } // Catch-all para URLs que no existen
+    { path: '**', redirectTo: 'productos' }, // Catch-all para URLs que no existen
+
+
+    { path: 'usuarios', 
+    component: Usuarios,
+    canActivate: [roleGuard] // <-- 2. Le ponemos el candado a la ruta
+  },
+
+  // Ruta comodín por si escriben cualquier cosa
+  { path: '**', redirectTo: 'productos' } 
 ];

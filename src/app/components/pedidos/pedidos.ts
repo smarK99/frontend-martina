@@ -101,7 +101,7 @@ export class Pedidos implements OnInit {
         let list: any[] = [];
 
         if (!role) return [];
-        else if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO' || role === 'ROLE_EMPLEADO') {
+        else if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_EMPLEADO') {
           // El personal interno ve absolutamente todos los pedidos
           list = pedidos.slice();
         } 

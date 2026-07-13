@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { JwtDto } from '../model/jwt-dto'; 
 import { LoginUsuario } from '../model/login-usuario';
 
-export type Role = 'ROLE_ADMIN' | 'ROLE_DUEÑO' | 'ROLE_STOCK' | 'ROLE_EMPLEADO' | 'ROLE_REPARTIDOR' | 'ROLE_CLIENTE' | null;
+export type Role = 'ROLE_ADMIN' | 'ROLE_DUENIO' | 'ROLE_STOCK' | 'ROLE_EMPLEADO' | 'ROLE_REPARTIDOR' | 'ROLE_CLIENTE' | null;
 
 @Injectable({
   providedIn: 'root'

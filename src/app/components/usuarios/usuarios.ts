@@ -2,9 +2,10 @@ import { Component, inject, OnInit, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, switchMap } from 'rxjs';
 
 import { AuthService } from '../../services/auth-service';
+import { UsuarioService } from '../../services/usuario.service';
 import { ActionBar } from '../action-bar/action-bar';
 
 @Component({
@@ -19,38 +20,74 @@ export class Usuarios implements OnInit {
   private fb = inject(FormBuilder);
   private modalService = inject(NgbModal);
   private auth = inject(AuthService);
+  private usuarioService = inject(UsuarioService); 
 
   role$ = this.auth.role$;
   
+  // Estado de la tabla
+  private refresh$ = new BehaviorSubject<void>(undefined);
+  usuarios$!: Observable<any[]>;
+
   // Formulario reactivo
   usuarioForm: FormGroup;
   isEditMode = false;
   usuarioSeleccionadoId: number | null = null;
 
+  // Variables para Roles
+  rolesDisponibles: string[] = ['ADMIN', 'DUENIO', 'STOCK', 'EMPLEADO', 'REPARTIDOR', 'CLIENTE'];
+  rolesSeleccionados: string[] = [];
+  usuarioParaRolesId: number | null = null;
+
   constructor() {
-    // Inicializamos el formulario con las reglas reales de tu Login
     this.usuarioForm = this.fb.group({
       nombreApellido: ['', Validators.required],
-      usuario: ['', [Validators.required, Validators.minLength(4)]], // Mínimo 4 como tu Login
+      usuario: ['', [Validators.required, Validators.minLength(4)]],
       mailUsuario: ['', [Validators.required, Validators.email]],
       telefonoUsuario: [''],
       domicilioUsuario: [''],
-      claveUsuario: ['', Validators.required] // Solo requerida, sin restricciones raras
+      claveUsuario: ['', Validators.required]
     });
+
+    // Enganchamos la tabla al backend
+    this.usuarios$ = this.refresh$.pipe(
+      switchMap(() => this.usuarioService.getAll())
+    );
   }
 
   ngOnInit() {}
 
-  // Método simple para abrir el modal de Alta limpia
+  // --- MODALES ALTA Y EDICIÓN ---
   abrirModalAlta(modal: TemplateRef<any>) {
     this.isEditMode = false;
     this.usuarioSeleccionadoId = null;
     this.usuarioForm.reset();
     
-    // En alta, el campo de usuario y clave se habilitan y son obligatorios
     this.usuarioForm.get('usuario')?.enable();
     this.usuarioForm.get('claveUsuario')?.setValidators([Validators.required]);
     this.usuarioForm.get('claveUsuario')?.updateValueAndValidity();
+
+    this.modalService.open(modal, { size: 'lg', centered: true });
+  }
+
+  abrirModalEdicion(modal: TemplateRef<any>, usuarioData: any) {
+    this.isEditMode = true;
+    
+    // 1. Corregimos el ID (antes era codUsuario, ahora es id)
+    this.usuarioSeleccionadoId = usuarioData.id;
+    
+    this.usuarioForm.get('usuario')?.disable();
+    this.usuarioForm.get('claveUsuario')?.clearValidators();
+    this.usuarioForm.get('claveUsuario')?.updateValueAndValidity();
+
+    // 2. Mapeamos los datos con los nombres correctos que vienen de la Base de Datos
+    this.usuarioForm.patchValue({
+      nombreApellido: usuarioData.nombreCompletoUsuario, 
+      usuario: usuarioData.username,                     
+      mailUsuario: usuarioData.email,                    
+      telefonoUsuario: usuarioData.telefono,             
+      domicilioUsuario: usuarioData.direccion,           
+      claveUsuario: '' 
+    });
 
     this.modalService.open(modal, { size: 'lg', centered: true });
   }
@@ -60,57 +97,40 @@ export class Usuarios implements OnInit {
     this.usuarioForm.reset();
   }
 
-  // --- LÓGICA DE EDICIÓN ---
-  abrirModalEdicion(modal: TemplateRef<any>, usuarioData: any) {
-    this.isEditMode = true;
-    this.usuarioSeleccionadoId = usuarioData.codUsuario;
-    
-    // En edición, el username no se puede cambiar y la clave no se pide
-    this.usuarioForm.get('usuario')?.disable();
-    this.usuarioForm.get('claveUsuario')?.clearValidators();
-    this.usuarioForm.get('claveUsuario')?.updateValueAndValidity();
-
-    // Precargamos los datos en el formulario
-    this.usuarioForm.patchValue({
-      nombreApellido: usuarioData.nombreApellido,
-      usuario: usuarioData.usuario,
-      mailUsuario: usuarioData.mailUsuario,
-      telefonoUsuario: usuarioData.telefonoUsuario,
-      domicilioUsuario: usuarioData.domicilioUsuario,
-      claveUsuario: '' 
-    });
-
-    this.modalService.open(modal, { size: 'lg', centered: true });
-  }
-
-  // --- LÓGICA DE GUARDADO (ALTA Y MODIFICACIÓN) ---
+  // --- GUARDAR Y DAR DE BAJA ---
   guardarUsuario() {
-    // 1. Verificamos que el formulario sea válido
     if (this.usuarioForm.invalid) {
       this.usuarioForm.markAllAsTouched();
       return;
     }
 
-    // 2. Obtenemos los valores (usamos getRawValue para incluir el 'usuario' aunque esté deshabilitado)
     const formValues = this.usuarioForm.getRawValue();
 
-    if (this.isEditMode) {
-      // 3A. Armamos el payload de Modificación (Exacto como pide el CU N°1)
+   if (this.isEditMode) {
       const payloadModificacion = {
-        codUsuario: this.usuarioSeleccionadoId,
+        // Aseguramos que el ID viaje correctamente
+        id: this.usuarioSeleccionadoId,
+        codUsuario: this.usuarioSeleccionadoId, 
+        
         domicilioUsuario: formValues.domicilioUsuario || '',
         mailUsuario: formValues.mailUsuario,
         nombreApellido: formValues.nombreApellido,
         telefonoUsuario: formValues.telefonoUsuario || ''
       };
       
-      console.log('Enviando DTO de Modificación al Backend:', payloadModificacion);
-      
-      // ACÁ IRÍA TU LLAMADA AL SERVICIO:
-      // this.usuarioService.update(payloadModificacion).subscribe(...)
+      this.usuarioService.update(payloadModificacion).subscribe({
+        next: () => {
+          this.closeModal();
+          this.refresh$.next(); 
+          alert('Usuario actualizado con éxito.');
+        },
+        error: (err) => {
+          console.error(err);
+          alert('Error al actualizar el usuario.');
+        }
+      });
       
     } else {
-      // 3B. Armamos el payload de Alta (Exacto como pide el CU N°1)
       const payloadAlta = {
         claveUsuario: formValues.claveUsuario,
         domicilioUsuario: formValues.domicilioUsuario || '',
@@ -120,31 +140,84 @@ export class Usuarios implements OnInit {
         telefonoUsuario: formValues.telefonoUsuario || ''
       };
 
-      console.log('Enviando DTO de Alta al Backend:', payloadAlta);
-      
-      // ACÁ IRÍA TU LLAMADA AL SERVICIO:
-      // this.usuarioService.create(payloadAlta).subscribe(...)
+      this.usuarioService.create(payloadAlta).subscribe({
+        next: () => {
+          this.closeModal();
+          this.refresh$.next(); 
+          alert('Usuario registrado con éxito.');
+        },
+        error: (err) => {
+          console.error(err);
+          alert('Error al registrar el usuario.');
+        }
+      });
     }
-
-    // 4. Cerramos el modal y damos aviso
-    this.closeModal();
-    alert(this.isEditMode ? 'Usuario actualizado con éxito.' : 'Usuario registrado con éxito.');
   }
 
-  // --- LÓGICA DE BAJA LÓGICA ---
   darDeBaja(codUsuario: number) {
     if (confirm('¿Estás seguro de que querés dar de baja a este usuario? Esta acción es lógica y registrará la fecha actual.')) {
+      const payloadBaja = { codUsuario: codUsuario };
       
-      const payloadBaja = {
-        codUsuario: codUsuario
-      };
-      
-      console.log('Enviando DTO de Baja al Backend:', payloadBaja);
-      
-      // ACÁ IRÍA TU LLAMADA AL SERVICIO:
-      // this.usuarioService.baja(payloadBaja).subscribe(...)
-      
-      alert('El usuario fue dado de baja exitosamente.');
+      this.usuarioService.baja(payloadBaja).subscribe({
+        next: () => {
+          this.refresh$.next();
+          alert('El usuario fue dado de baja exitosamente.');
+        },
+        error: (err) => {
+          console.error(err);
+          alert('Error al dar de baja.');
+        }
+      });
     }
+  }
+
+  abrirModalRoles(modal: TemplateRef<any>, usuarioData: any) {
+    this.usuarioParaRolesId = usuarioData.id; 
+
+    // 2. Leemos los roles tal cual vienen de la base de datos, sin inventarle prefijos
+    if (usuarioData.tiposUsuario && usuarioData.tiposUsuario.length > 0) {
+      this.rolesSeleccionados = usuarioData.tiposUsuario.map((t: any) => t.nombreTipoUsuario.toUpperCase());
+    } else if (usuarioData.authorities) {
+      // Alternativa de seguridad (por si Java no manda tiposUsuario)
+      this.rolesSeleccionados = usuarioData.authorities.map((a: any) => a.authority.replace('ROLE_', '').toUpperCase());
+    } else {
+      this.rolesSeleccionados = [];
+    }
+    
+    this.modalService.open(modal, { size: 'md', centered: true });
+  }
+
+  toggleRol(rol: string, event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) {
+      this.rolesSeleccionados.push(rol);
+    } else {
+      this.rolesSeleccionados = this.rolesSeleccionados.filter(r => r !== rol);
+    }
+    // Agregamos este chismoso:
+    console.log("Rol clickeado:", rol, "| Estado actual de la lista:", this.rolesSeleccionados);
+  }
+
+  guardarRoles() {
+    const payload = {
+      id: this.usuarioParaRolesId,
+      codUsuario: this.usuarioParaRolesId, 
+      roles: this.rolesSeleccionados
+    };
+    
+    // Agregamos este chismoso antes de mandarlo a Java:
+    console.log(">>> ENVIANDO A JAVA EL PAYLOAD:", payload);
+    
+    this.usuarioService.actualizarRoles(payload).subscribe({
+      next: () => {
+        this.modalService.dismissAll();
+        this.refresh$.next();
+        alert('Permisos actualizados correctamente.');
+      },
+      error: (err) => {
+        console.error(err);
+        alert('Error al actualizar permisos.');
+      }
+    });
   }
 }

@@ -1,5 +1,5 @@
 @if (role$ | async; as role) {
-  @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO') {
+  @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
 
     <app-action-bar title="Gestión de Usuarios">
       <button class="btn btn-danger d-flex align-items-center gap-2 ms-2" (click)="abrirModalAlta(usuarioModal)">
@@ -27,26 +27,38 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td class="ps-3 fw-bold text-muted">1</td>
-                <td>Máximo Perea</td>
-                <td>maxperea</td>
-                <td>maximo@ejemplo.com</td>
-                <td>
-                  <span class="badge bg-success">Activo</span>
-                </td>
-                <td class="text-end pe-3">
-                  <div class="btn-group gap-2">
-                    <button class="btn btn-sm btn-outline-secondary border-0" title="Editar">
-                      <i class="bi bi-pencil-square fs-5"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger border-0" title="Dar de Baja">
-                      <i class="bi bi-person-x-fill fs-5"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
+@for (u of usuarios$ | async; track $index) {
+  <tr>
+    <td class="ps-3 fw-bold text-muted">{{ u.id }}</td>
+    <td>{{ u.nombreCompletoUsuario }}</td>
+    <td>{{ u.username }}</td>
+    <td>{{ u.email }}</td>
+    <td>
+      @if (u.fechaHoraBajaUsuario) { 
+        <span class="badge bg-secondary">Inactivo</span> 
+      } @else {
+        <span class="badge bg-success">Activo</span>
+      }
+    </td>
+    <td class="text-end pe-3">
+      <div class="btn-group gap-2">
+        <button class="btn btn-sm btn-outline-primary border-0" title="Gestionar Roles" 
+          (click)="abrirModalRoles(rolesModal, u)">
+          <i class="bi bi-shield-lock fs-5"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary border-0" title="Editar" 
+          (click)="abrirModalEdicion(usuarioModal, u)">
+          <i class="bi bi-pencil-square fs-5"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger border-0" title="Dar de Baja" 
+          (click)="darDeBaja(u.id)">
+          <i class="bi bi-person-x-fill fs-5"></i>
+        </button>
+      </div>
+    </td>
+  </tr>
+}
+</tbody>
           </table>
         </div>
 
@@ -128,4 +140,37 @@
     <button type="button" class="btn btn-danger" (click)="guardarUsuario()">
         {{ isEditMode ? 'Actualizar Usuario' : 'Crear Usuario' }}
 </button>  </div>
+</ng-template>
+
+
+<ng-template #rolesModal let-modal>
+  <!-- Encabezado con el rojo corporativo -->
+  <div class="modal-header text-white border-0" style="background-color: #d81b27;">
+    <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock me-2"></i> Gestión de Permisos</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+
+  <div class="modal-body p-4">
+    <p class="text-muted mb-4">Seleccioná los roles activos para este usuario. Los cambios impactarán en su próximo inicio de sesión.</p>
+    
+   <div class="d-flex flex-column gap-3">
+      @for (rol of rolesDisponibles; track rol) {
+        <div class="form-check form-switch fs-5">
+          <input class="form-check-input" type="checkbox" role="switch" 
+                 [id]="rol" 
+                 [checked]="rolesSeleccionados.includes(rol)"
+                 (change)="toggleRol(rol, $event)">
+          <label class="form-check-label ms-2" [for]="rol">
+            {{ rol === 'DUENIO' ? 'DUEÑO' : rol }}
+          </label>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="modal-footer bg-light border-0">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
+    <!-- Botón de guardar actualizado a btn-danger -->
+    <button type="button" class="btn btn-danger" (click)="guardarRoles()">Guardar Permisos</button>
+  </div>
 </ng-template>

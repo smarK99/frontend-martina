@@ -88,7 +88,7 @@ export class Repartos implements OnInit {
         let list: Reparto[] = [];
         if (!role) return [];
 
-        if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO') {
+        if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
           // Ven absolutamente todos los repartos
           list = repartos.slice();
         } else if (role === 'ROLE_REPARTIDOR') {

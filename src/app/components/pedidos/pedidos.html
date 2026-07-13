@@ -5,7 +5,7 @@
   </button>
 
   @if (role$ | async; as role) {
-    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO' || role === 'ROLE_EMPLEADO') {
+    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_EMPLEADO') {
       <button class="btn btn-danger d-flex align-items-center gap-2 ms-2" (click)="openModal(nuevoPedidoModal)">
         <i class="bi bi-plus-lg"></i> Nuevo Pedido
       </button>
@@ -27,7 +27,7 @@
 
       @if (role$ | async; as role) {
         <div class="text-muted small fw-bold">
-          @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUEÑO') {
+          @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
             <i class="bi bi-shield-check text-success"></i> Viendo todos los pedidos (Admin)
           } @else if (role === 'ROLE_CLIENTE') {
             <i class="bi bi-person-check text-primary"></i> Viendo tus pedidos
