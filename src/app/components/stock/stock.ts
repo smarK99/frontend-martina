@@ -78,7 +78,7 @@ export class Stock {
         const q = (filter || '').trim().toLowerCase();
 
         // Si no tiene rol o no es admin/empleado, devolver vacío
-        if (!(role === 'ROLE_ADMIN' || role === 'ROLE_EMPLEADO')) return [];
+        if (!this.tieneAcceso(role)) return [];
 
         // lista base (todos los conteos) ordenada por fecha
         let list = counts.slice();
