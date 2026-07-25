@@ -9,12 +9,18 @@ import { LoginComponent } from './components/auth/login/login.component';
 import { authGuard } from './guards/auth.guard'; 
 import { Usuarios } from './components/usuarios/usuarios';
 import { roleGuard } from './guards/role.guard'; // <-- 1. Importamos el guardia
+import { ResetPasswordComponent } from './components/auth/reset-password/reset-password';
 
 export const routes: Routes = [
     { 
         path: 'login', 
         component: LoginComponent 
     },
+
+    { 
+    path: 'reset-password', component: ResetPasswordComponent 
+    },
+
     { 
         // La vidriera es pública, no lleva guard
         path: 'productos', 
@@ -47,8 +53,12 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { roles: ['ROLE_ADMIN', 'ROLE_DUENIO'] }
     },
-    { path: '', pathMatch: 'full', redirectTo: 'productos' },
-    { path: '**', redirectTo: 'productos' }, // Catch-all para URLs que no existen
+    { 
+        path: '', pathMatch: 'full', redirectTo: 'productos' 
+    },
+    { 
+        path: '**', redirectTo: 'productos' 
+    }, // Catch-all para URLs que no existen
 
 
     { path: 'usuarios', 
@@ -57,5 +67,8 @@ export const routes: Routes = [
   },
 
   // Ruta comodín por si escriben cualquier cosa
-  { path: '**', redirectTo: 'productos' } 
+  { 
+    path: '**', redirectTo: 'productos' 
+}
+
 ];

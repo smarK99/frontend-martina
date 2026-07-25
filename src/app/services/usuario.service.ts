@@ -57,4 +57,15 @@ export class UsuarioService {
     return this.http.post(`${this.apiURL}/cambiar-clave`, datos); 
   }
  
+/**
+   * Envía el email al backend para solicitar el link de recuperación de clave
+   */
+  solicitarRecuperacionClave(email: string): Observable<any> {
+    return this.http.post(`${this.apiURL}/recuperar-clave`, { email });
+  }
+
+  restablecerClaveConToken(token: string, nuevaClave: string): Observable<any> {
+    return this.http.post(`${this.apiURL}/reset-password`, { token, nuevaClave });
+  }
+
 }

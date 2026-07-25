@@ -75,7 +75,55 @@
           }
         </button>
         
+
+        <!-- Ponelo abajo de tu botón de Login -->
+        <div class="text-center mt-3">
+          <a href="javascript:void(0)" class="text-decoration-none text-danger" (click)="abrirModalRecuperacion(modalRecuperacion)">
+            ¿Olvidaste tu contraseña?
+          </a>
+        </div>
+
       </form>
+
+      <!-- MODAL DE RECUPERACIÓN DE CLAVE -->
+      <ng-template #modalRecuperacion let-modal>
+        <div class="modal-header text-white border-0" style="background-color: #d81b27;">
+          <h5 class="modal-title fw-bold"><i class="bi bi-envelope-at-fill me-2"></i>Recuperar Contraseña</h5>
+          <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          @if (!mensajeRecuperacion) {
+            <p class="text-muted mb-4">Ingresá el correo electrónico asociado a tu cuenta y te enviaremos las instrucciones para restablecer tu contraseña.</p>
+            
+            <div class="mb-3">
+              <label class="form-label fw-bold small">Correo Electrónico</label>
+              <input type="email" class="form-control" [formControl]="emailRecuperacion" placeholder="ejemplo@gmail.com" (keyup.enter)="enviarCorreoRecuperacion()">
+              
+              @if (emailRecuperacion.invalid && emailRecuperacion.touched) {
+                <div class="text-danger small mt-1">Ingresá un correo válido.</div>
+              }
+            </div>
+          } @else {
+            <!-- Pantalla de éxito dentro del mismo modal -->
+            <div class="text-center py-4">
+              <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+              <h5 class="mt-3 fw-bold">¡Revisá tu bandeja!</h5>
+              <p class="text-muted">{{ mensajeRecuperacion }}</p>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer bg-light border-0">
+          @if (!mensajeRecuperacion) {
+            <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
+            <button type="button" class="btn btn-danger" (click)="enviarCorreoRecuperacion()" [disabled]="emailRecuperacion.invalid">Enviar Instrucciones</button>
+          } @else {
+            <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cerrar</button>
+          }
+        </div>
+      </ng-template>
+      
     </div>
   </div>
 </div>
