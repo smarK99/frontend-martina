@@ -1,5 +1,6 @@
 export interface JwtDto {
   token: string;
-  bearer: string;
+  bearer?: string;
   username: string;
+  refreshToken?: string;
 }

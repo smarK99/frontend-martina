@@ -28,8 +28,6 @@ export class AuthService {
     this.isLoggedIn$ = this.role$.pipe(map(r => !!r));
   }
 
-  // --- NUEVA FUNCIÓN NORMALIZADORA ---
-  // Se asegura de que el rol siempre tenga el formato correcto para nuestros @if
   private formatRole(rawRole: string | undefined | null): Role {
     if (!rawRole) return null;
     let formatted = rawRole.toUpperCase();
@@ -48,7 +46,6 @@ export class AuthService {
       const payload = this.decodeToken(token);
       const authority = payload?.sub ? payload.authorities?.[0]?.authority : null;
       
-      // Pasamos por el formateador antes de devolverlo
       return this.formatRole(authority);
     } catch {
       return null;
@@ -61,15 +58,32 @@ export class AuthService {
         if (isPlatformBrowser(this.platformId)) {
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', data.username);
+          // --- LÍNEA NUEVA: Guardamos el Refresh Token ---
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
         }
         
         const payload = this.decodeToken(data.token);
         const rawRole = payload?.authorities?.[0]?.authority;
         
-        // Pasamos por el formateador al iniciar sesión
         const role = this.formatRole(rawRole);
-        
         this.roleSubject.next(role);
+      })
+    );
+  }
+
+  // --- NUEVO MÉTODO: Pide un Access Token nuevo usando el Refresh Token ---
+  public refreshToken(): Observable<JwtDto> {
+    const refreshToken = this.getRefreshToken();
+    return this.httpClient.post<JwtDto>(this.authURL + 'refresh', { refreshToken }).pipe(
+      tap((data: JwtDto) => {
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem('token', data.token);
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
+        }
       })
     );
   }
@@ -77,6 +91,7 @@ export class AuthService {
   public logout() {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken'); // <-- Limpiamos también el Refresh Token
       localStorage.removeItem('user');
       localStorage.removeItem('role'); 
     }
@@ -86,6 +101,13 @@ export class AuthService {
   public getToken(): string | null {
     if (isPlatformBrowser(this.platformId)) {
       return localStorage.getItem('token');
+    }
+    return null;
+  }
+
+  public getRefreshToken(): string | null {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('refreshToken');
     }
     return null;
   }
