@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#d81b27;">
     <div class="container">
-        <a class="navbar-brand d-flex align-items-center" [routerLink]="['/productos']">
+        <a class="navbar-brand d-flex align-items-center" routerLink="/productos">
             <span class="logo-dot me-2"></span>
             <strong>Martina Sandwichs</strong>
         </a>
@@ -11,50 +11,120 @@
 
         <div id="mainNav" class="collapse navbar-collapse">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-2">
+                
                 <li class="nav-item">
                     <a routerLink="/productos" routerLinkActive="active" class="nav-link">
                         <i class="bi bi-bag"></i> Productos
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a routerLink="/pedidos" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-receipt"></i> Pedidos
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a routerLink="/stock" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-box-seam"></i> Stock
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a routerLink="/repartos" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-truck"></i> Repartos
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a routerLink="/estadisticas" routerLinkActive="active" class="nav-link">
-                        <i class="bi bi-graph-up"></i> Estadísticas
-                    </a>
-                </li>
 
-                <li class="nav-item ms-lg-3 d-flex align-items-center">
-                    @if (role$ | async; as role) {
-                    <span class="role-badge me-2">
-                        Rol: {{ role }}
-                    </span>
+                @if (displayRole$ | async; as displayRole) {
+                    @if (displayRole === 'ADMIN' || displayRole === 'DUENIO') {
+                    <li class="nav-item">
+                        <a class="nav-link" routerLink="/usuarios" routerLinkActive="active">
+                            <i class="bi bi-people"></i> Usuarios
+                        </a>
+                    </li>
                     }
+                }
+
+                @if (role$ | async; as role) {
+                    
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_EMPLEADO' || role === 'ROLE_CLIENTE') {
+                    <li class="nav-item">
+                        <a routerLink="/pedidos" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-receipt"></i> Pedidos
+                        </a>
+                    </li>
+                    }
+
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_STOCK') {
+                    <li class="nav-item">
+                        <a routerLink="/stock" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-box-seam"></i> Stock
+                        </a>
+                    </li>
+                    }
+
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_REPARTIDOR') {
+                    <li class="nav-item">
+                        <a routerLink="/repartos" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-truck"></i> Repartos
+                        </a>
+                    </li>
+                    }
+
+                    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
+                    <li class="nav-item">
+                        <a routerLink="/estadisticas" routerLinkActive="active" class="nav-link">
+                            <i class="bi bi-graph-up"></i> Estadísticas
+                        </a>
+                    </li>
+                    }
+                }
+
+                <!-- Zona de Botones y Perfil -->
+                <li class="nav-item ms-lg-4 d-flex align-items-center gap-2">
                     @if (!(isLoggedIn$ | async)) {
-<button class="btn btn-light btn-sm" routerLink="/login">
-    <i class="bi bi-box-arrow-in-right"></i> Login
-</button>
-}@else {
+                    <button class="btn btn-light btn-sm" routerLink="/login">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </button>
+                    } @else {
+                    <button class="btn btn-outline-light btn-sm" (click)="abrirModalCambioClave(modalCambioClave)">
+                        <i class="bi bi-key"></i> Cambiar Clave
+                    </button>
                     <button class="btn btn-outline-light btn-sm" (click)="logout()">
                         <i class="bi bi-box-arrow-right"></i> Logout
                     </button>
                     }
-                </li>        
-
+                </li>  
             </ul>
         </div>
     </div>
 </nav>
+
+<!-- ACÁ ESTÁ EL CAMBIO DE COLOR DEL MODAL DE CLAVE -->
+<ng-template #modalCambioClave let-modal>
+  <div class="modal-header text-white border-0" style="background-color: #d81b27;">
+    <h5 class="modal-title fw-bold"><i class="bi bi-key-fill me-2"></i>Cambiar Contraseña</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+
+  <div class="modal-body p-4">
+    <form [formGroup]="claveForm">
+      <div class="mb-3">
+        <label class="form-label fw-bold small">Contraseña Actual *</label>
+        <input type="password" class="form-control" formControlName="claveActual" placeholder="Ingresá tu clave actual">
+        @if (claveForm.get('claveActual')?.invalid && claveForm.get('claveActual')?.touched) {
+          <div class="text-danger small mt-1">Este campo es obligatorio.</div>
+        }
+      </div>
+
+      <hr class="my-4 text-muted">
+
+      <div class="mb-3">
+        <label class="form-label fw-bold small">Nueva Contraseña *</label>
+        <input type="password" class="form-control" formControlName="nuevaClave" placeholder="Mínimo 4 caracteres">
+        @if (claveForm.get('nuevaClave')?.invalid && claveForm.get('nuevaClave')?.touched) {
+          <div class="text-danger small mt-1">
+            @if (claveForm.get('nuevaClave')?.errors?.['required']) { Obligatorio. }
+            @if (claveForm.get('nuevaClave')?.errors?.['minlength']) { Mínimo 4 caracteres. }
+          </div>
+        }
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold small">Confirmar Nueva Contraseña *</label>
+        <input type="password" class="form-control" formControlName="confirmarClave" placeholder="Repetí tu nueva clave">
+        @if (claveForm.hasError('passwordsMismatch') && claveForm.get('confirmarClave')?.touched) {
+          <div class="text-danger small mt-1 fw-bold">Las contraseñas no coinciden.</div>
+        }
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer bg-light border-0">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
+    <button type="button" class="btn btn-danger" (click)="actualizarMiClave()">Actualizar Contraseña</button>
+  </div>
+</ng-template>

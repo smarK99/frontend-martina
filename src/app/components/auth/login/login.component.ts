@@ -1,13 +1,16 @@
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth-service';
 import { Component, inject } from '@angular/core';
-import { FormsModule, NgForm } from '@angular/forms';
+import { FormsModule, NgForm, ReactiveFormsModule, FormControl, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { TemplateRef } from '@angular/core';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { UsuarioService } from '../../../services/usuario.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
@@ -19,9 +22,13 @@ export class LoginComponent {
   isLoading = false;
   mostrarPassword = false; 
 
-  
   private authService = inject(AuthService);
   private router = inject(Router);
+  private usuarioService = inject(UsuarioService);
+  private modalService = inject(NgbModal);
+
+  emailRecuperacion = new FormControl('', [Validators.required, Validators.email]);
+  mensajeRecuperacion: string = '';
 
   onLogin(form: NgForm) {
     if (form.invalid) {
@@ -49,6 +56,31 @@ export class LoginComponent {
           this.mensajeError = 'Error de conexión con el servidor. Intentá más tarde.';
         }
         console.error('Error detallado en el login:', err);
+      }
+    });
+  }
+
+  abrirModalRecuperacion(modal: TemplateRef<any>) {
+    this.emailRecuperacion.reset();
+    this.mensajeRecuperacion = '';
+    this.modalService.open(modal, { centered: true });
+  }
+
+  enviarCorreoRecuperacion() {
+    if (this.emailRecuperacion.invalid) {
+      this.emailRecuperacion.markAsTouched();
+      return;
+    }
+
+    const email = this.emailRecuperacion.value!;
+    this.usuarioService.solicitarRecuperacionClave(email).subscribe({
+      next: (res) => {
+        // Mostramos el mensaje de éxito que nos manda Spring Boot
+        this.mensajeRecuperacion = res.mensaje;
+      },
+      error: (err) => {
+        // Como buena práctica, no avisamos si falló por no existir, pero capturamos errores de red
+        this.mensajeRecuperacion = "Ocurrió un error al intentar enviar el correo. Intentá más tarde.";
       }
     });
   }

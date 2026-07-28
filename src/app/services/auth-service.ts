@@ -3,11 +3,10 @@ import { BehaviorSubject, Observable, tap, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { JwtDto } from '../model/jwt-dto'; // Asegúrate de tener esta interfaz
-import { LoginUsuario } from '../model/login-usuario'; // Interfaz para {username, password}
+import { JwtDto } from '../model/jwt-dto'; 
+import { LoginUsuario } from '../model/login-usuario';
 
-// Actualizamos los roles para que coincidan con Spring Security
-export type Role = 'ROLE_ADMIN' | 'ROLE_DUEÑO' | 'ROLE_STOCK' | 'ROLE_EMPLEADO' | 'ROLE_REPARTIDOR' | 'ROLE_CLIENTE' | null;
+export type Role = 'ROLE_ADMIN' | 'ROLE_DUENIO' | 'ROLE_STOCK' | 'ROLE_EMPLEADO' | 'ROLE_REPARTIDOR' | 'ROLE_CLIENTE' | null;
 
 @Injectable({
   providedIn: 'root'
@@ -22,11 +21,20 @@ export class AuthService {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private httpClient: HttpClient // Inyectamos HttpClient
+    private httpClient: HttpClient 
   ) {
     this.roleSubject = new BehaviorSubject<Role>(this.getInitialRole());
     this.role$ = this.roleSubject.asObservable();
     this.isLoggedIn$ = this.role$.pipe(map(r => !!r));
+  }
+
+  private formatRole(rawRole: string | undefined | null): Role {
+    if (!rawRole) return null;
+    let formatted = rawRole.toUpperCase();
+    if (!formatted.startsWith('ROLE_')) {
+      formatted = 'ROLE_' + formatted;
+    }
+    return formatted as Role;
   }
 
   private getInitialRole(): Role {
@@ -35,34 +43,47 @@ export class AuthService {
       const token = localStorage.getItem('token');
       if (!token) return null;
       
-      // Extraemos el rol directamente del token guardado
       const payload = this.decodeToken(token);
-      // Spring Security guarda las authorities en un array, tomamos la primera
       const authority = payload?.sub ? payload.authorities?.[0]?.authority : null;
       
-      return authority ? (authority as Role) : null;
+      return this.formatRole(authority);
     } catch {
       return null;
     }
   }
 
-  // Método REAL de login que llama al backend
   public login(loginUsuario: LoginUsuario): Observable<JwtDto> {
     return this.httpClient.post<JwtDto>(this.authURL + 'login', loginUsuario).pipe(
       tap((data: JwtDto) => {
         if (isPlatformBrowser(this.platformId)) {
-          // Guardamos el token real
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', data.username);
+          // Guardamos el Refresh Token
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
         }
         
-        // Decodificamos el token para saber qué rol obtuvo
         const payload = this.decodeToken(data.token);
-        // Spring Security manda los roles dentro del token. 
-        // Dependiendo de cómo lo configuramos, podrías necesitar ajustar esto.
-        const role = payload?.authorities?.[0]?.authority as Role || null;
+        const rawRole = payload?.authorities?.[0]?.authority;
         
+        const role = this.formatRole(rawRole);
         this.roleSubject.next(role);
+      })
+    );
+  }
+
+  // Pide un Access Token nuevo usando el Refresh Token
+  public refreshToken(): Observable<JwtDto> {
+    const refreshToken = this.getRefreshToken();
+    return this.httpClient.post<JwtDto>(this.authURL + 'refresh', { refreshToken }).pipe(
+      tap((data: JwtDto) => {
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.setItem('token', data.token);
+          if (data.refreshToken) {
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
+        }
       })
     );
   }
@@ -70,8 +91,9 @@ export class AuthService {
   public logout() {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken'); 
       localStorage.removeItem('user');
-      localStorage.removeItem('role'); // Por si quedó de la versión anterior
+      localStorage.removeItem('role'); 
     }
     this.roleSubject.next(null);
   }
@@ -83,7 +105,13 @@ export class AuthService {
     return null;
   }
 
-  // Utilidad para leer el JWT sin librerías externas
+  public getRefreshToken(): string | null {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('refreshToken');
+    }
+    return null;
+  }
+
   private decodeToken(token: string): any {
     try {
       const payload = token.split('.')[1];

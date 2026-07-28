@@ -69,12 +69,12 @@ export class Stock {
   // seleccionado para el modal
   selectedCount: ConteoStock | null = null;
 
-  //Variable modo edicion/creacion
+  //Variable modo edicion/creacion (De la rama de Santi)
   isEditMode: boolean = false;
   idConteoEditando: number | null = null;
 
   constructor() {
-    this.counts$ = this.stockService.getAll();
+    // Conectamos la tabla al gatillo de refresco (Tu lógica reactiva)
     this.counts$ = this.refresh$.pipe(
       switchMap(() => this.stockService.getAll())
     );
@@ -84,8 +84,10 @@ export class Stock {
       map(([counts, role, filter]) => {
         const q = (filter || '').trim().toLowerCase();
 
-        // Si no tiene rol o no es admin/empleado, devolver vacío
-        if (!this.tieneAcceso(role)) return [];
+        // ESCUDO: Si no tiene rol o no es del equipo interno, devolver vacío (Tu seguridad)
+        if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO' && role !== 'ROLE_STOCK') {
+          return [];
+        }
 
         // lista base (todos los conteos) ordenada por fecha
         let list = counts.slice();
@@ -103,7 +105,7 @@ export class Stock {
     );
 
     this.conteoForm = this.fb.group({
-      idUsuario: [this.obtenerIdUsuarioLogueado(), Validators.required], // ID del empleado logueado
+      idUsuario: [this.obtenerIdUsuarioLogueado(), Validators.required], // ID del empleado logueado (Mejora de Santi)
       descripcion: ['']
     });
   }

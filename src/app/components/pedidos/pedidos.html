@@ -4,9 +4,13 @@
     <i class="bi bi-list-columns"></i> Historial
   </button>
 
-  <button class="btn btn-danger d-flex align-items-center gap-2 ms-2" (click)="openModal(nuevoPedidoModal)">
-    <i class="bi bi-plus-lg"></i> Nuevo Pedido
-  </button>
+  @if (role$ | async; as role) {
+    @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_EMPLEADO') {
+      <button class="btn btn-danger d-flex align-items-center gap-2 ms-2" (click)="openModal(nuevoPedidoModal)">
+        <i class="bi bi-plus-lg"></i> Nuevo Pedido
+      </button>
+    }
+  }
 
 </app-action-bar>
 
@@ -22,17 +26,17 @@
       </div>
 
       @if (role$ | async; as role) {
-      <div class="text-muted small">
-        @if (role === 'ROLE_ADMIN') {
-        Viendo los últimos pedidos (admin)
-        } @else if (role === 'ROLE_CLIENTE') {
-        Viendo tus últimos pedidos
-        } @else {
-        Vista interna
-        }
-      </div>
+        <div class="text-muted small fw-bold">
+          @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
+            <i class="bi bi-shield-check text-success"></i> Viendo todos los pedidos (Admin)
+          } @else if (role === 'ROLE_CLIENTE') {
+            <i class="bi bi-person-check text-primary"></i> Viendo tus pedidos
+          } @else if (role === 'ROLE_EMPLEADO') {
+            <i class="bi bi-shop text-info"></i> Vista de sucursal (Empleado)
+          }
+        </div>
       } @else {
-      <div class="text-muted small">Inicia sesión para ver pedidos</div>
+        <div class="text-muted small">Inicia sesión para ver pedidos</div>
       }
     </div>
 

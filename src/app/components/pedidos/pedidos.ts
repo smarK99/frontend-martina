@@ -93,16 +93,26 @@ export class Pedidos implements OnInit {
       switchMap(() => this.pedidoService.getAll())
     );
 
-    // Lógica reactiva de filtrado y roles
+    // Lógica reactiva de filtrado y roles (Blindado)
     this.visiblePedidos$ = combineLatest([this.pedidos$, this.role$, this.filter$]).pipe(
       map(([pedidos, role, filter]) => {
         const q = (filter || '').trim().toLowerCase();
         let list: any[] = [];
 
         if (!role) return [];
-        else if (role === 'ROLE_ADMIN') list = pedidos.slice();
-        else if (role === 'ROLE_CLIENTE') list = pedidos.filter(p => p.sucursal.id === this.CURRENT_CLIENT_ID);
-        else list = pedidos.slice();
+        else if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_EMPLEADO') {
+          // El personal interno ve absolutamente todos los pedidos
+          list = pedidos.slice();
+        } 
+        else if (role === 'ROLE_CLIENTE') {
+          // El cliente SOLO ve los que coinciden con su ID 
+          // (Nota: Seguis usando CURRENT_CLIENT_ID = 1 por ahora, está perfecto para probar)
+          list = pedidos.filter(p => p.sucursal.id === this.CURRENT_CLIENT_ID);
+        } 
+        else {
+          // Si entra un Repartidor o alguien de Stock por error a esta URL, no ve nada
+          return [];
+        }
 
         if (q) {
           list = list.filter(p =>

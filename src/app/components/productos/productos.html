@@ -1,23 +1,27 @@
-<app-action-bar [title]="tituloPantalla">
-  
-  <div ngbDropdown class="d-inline-block me-2">
-    <button class="btn btn-outline-secondary" id="dropdownGestionar" ngbDropdownToggle>
-      Gestionar...
-    </button>
-    <div ngbDropdownMenu aria-labelledby="dropdownGestionar">
-      <button ngbDropdownItem (click)="cambiarVista('PRODUCTOS')">Ver Productos</button>
-      <div class="dropdown-divider"></div>
-      <button ngbDropdownItem (click)="cambiarVista('CATEGORIAS')">Categorías</button>
-      <button ngbDropdownItem (click)="cambiarVista('INSUMOS')">Insumos</button>
-      <button ngbDropdownItem (click)="cambiarVista('PRECIOS_SUCURSAL')">Precios por Sucursal</button>
-    </div>
-  </div>
+@if (role$ | async; as role) {
+  @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
+    <app-action-bar [title]="tituloPantalla">
+      
+      <div ngbDropdown class="d-inline-block me-2">
+        <button class="btn btn-outline-secondary" id="dropdownGestionar" ngbDropdownToggle>
+          Gestionar...
+        </button>
+        <div ngbDropdownMenu aria-labelledby="dropdownGestionar">
+          <button ngbDropdownItem (click)="cambiarVista('PRODUCTOS')">Ver Productos</button>
+          <div class="dropdown-divider"></div>
+          <button ngbDropdownItem (click)="cambiarVista('CATEGORIAS')">Categorías</button>
+          <button ngbDropdownItem (click)="cambiarVista('INSUMOS')">Insumos</button>
+          <button ngbDropdownItem (click)="cambiarVista('PRECIOS_SUCURSAL')">Precios por Sucursal</button>
+        </div>
+      </div>
 
-  <button class="btn btn-danger d-flex align-items-center gap-2" (click)="ejecutarAccionPrincipal()">
-    <i class="bi bi-plus-lg"></i> {{ textoBotonNuevo }}
-  </button>
+      <button class="btn btn-danger d-flex align-items-center gap-2" (click)="ejecutarAccionPrincipal()">
+        <i class="bi bi-plus-lg"></i> {{ textoBotonNuevo }}
+      </button>
 
-</app-action-bar>
+    </app-action-bar>
+  }
+}
 
 <section class="py-3">
   <div class="container">

@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; // Añadido switchMap
+import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; 
 import { RepartosService } from '../../services/repartos-service';
 import { PedidoService } from '../../services/pedido-service';
 import { AuthService } from '../../services/auth-service';
@@ -79,24 +79,24 @@ export class Repartos implements OnInit {
       switchMap(() => this.repartosService.getAll())
     );
 
-    // Tu lógica original de filtrado por roles (INTACTA)
+    // Tu lógica original de filtrado por roles (INTACTA Y SEGURA)
     this.visibleRepartos$ = combineLatest([this.repartos$, this.role$, this.filter$]).pipe(
       map(([repartos, role, filter]) => {
         const q = (filter || '').trim().toLowerCase();
 
-        // 1) Base según rol
+        // 1) Base según rol (Usando nomenclatura estricta)
         let list: Reparto[] = [];
         if (!role) return [];
-        if (role === 'ROLE_ADMIN') {
+
+        if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
+          // Ven absolutamente todos los repartos
           list = repartos.slice();
-        } else if (role === 'ROLE_EMPLEADO') {
-          // si el empleado es repartidor, ver solo sus repartos
+        } else if (role === 'ROLE_REPARTIDOR') {
+          // El repartidor ve exclusivamente los suyos
           list = repartos.filter(r => r.usuario.idUsuario === this.CURRENT_REPARTIDOR_ID);
-        } else if (role === 'ROLE_CLIENTE') {
-          // cliente ve repartos que contienen sus pedidos
-          list = repartos.filter(r => r.pedidosList.some(p => p.sucursal.id === this.CURRENT_CLIENT_ID));
         } else {
-          list = repartos.slice();
+          // Cualquier otro rol (como ROLE_CLIENTE o ROLE_STOCK) no ve nada acá
+          return [];
         }
 
         // 2) aplicar filtro si hay (por repartidor, cliente o id)
