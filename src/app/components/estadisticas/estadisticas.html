@@ -1,7 +1,7 @@
 <section class="py-4">
     <div class="container">
         @if (role$ | async; as role) {
-        @if (role === 'admin') {
+        @if (esAdmin(role)) {
 
         @if (datosCargados) {
         <!-- KPI row -->

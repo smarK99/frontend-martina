@@ -5,6 +5,7 @@ import { Categorias } from './categorias/categorias';
 import { Insumos } from './insumos/insumos';
 import { ActionBar } from "../action-bar/action-bar";
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { AsignarPrecios } from "./asignar-precios/asignar-precios";
 
 // Definimos los tipos de vistas posibles
 type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
@@ -12,7 +13,7 @@ type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
 @Component({
   selector: 'app-productos',
   standalone: true,
-  imports: [CommonModule, ProductoGestion, Categorias, Insumos, ActionBar, NgbModule],
+  imports: [CommonModule, ProductoGestion, Categorias, Insumos, ActionBar, NgbModule, AsignarPrecios],
   templateUrl: './productos.html',
   styleUrl: './productos.css'
 })
@@ -72,4 +73,26 @@ export class Productos {
         break;
     }
   }
+
+  // Agregá este método en tu componente
+  getImagenProducto(nombre: string): string {
+    const nombreLimpio = nombre.toLowerCase();
+
+    if (nombreLimpio.includes('crudo')) {
+      return '/assets/jcrudo.jpg';
+    } 
+    if (nombreLimpio.includes('salame')) {
+      // Reemplazá por el nombre exacto si es distinto
+      return '/assets/salame-verdura.jpg'; 
+    } 
+    if (nombreLimpio.includes('cocido') || nombreLimpio.includes('jyq')) {
+      return '/assets/jcocido.jpg';
+    }
+
+    // Si no encuentra ninguna de esas palabras, pone el logo por defecto
+    return '/assets/martina-logo.png';
+  }
+
+
 }
+

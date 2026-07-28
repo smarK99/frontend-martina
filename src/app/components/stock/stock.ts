@@ -9,6 +9,8 @@ import { ActionBar } from '../action-bar/action-bar';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InsumosService } from '../../services/insumos-service';
 import { ProductoService } from '../../services/producto-service';
+import { PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 // Interfaces para el manejo interno del formulario
 interface ItemProductoStock {
@@ -36,6 +38,7 @@ export class Stock {
   private productoService = inject(ProductoService);
   private insumoService = inject(InsumosService);
   private auth = inject(AuthService);
+  private platformId = inject(PLATFORM_ID); //Soluciona problema de SSR con localStorage CANNOT GET /STOCK
 
   role$ = this.auth.role$;
   visibleCounts$!: Observable<ConteoStock[]>;
@@ -66,6 +69,10 @@ export class Stock {
   // seleccionado para el modal
   selectedCount: ConteoStock | null = null;
 
+  //Variable modo edicion/creacion
+  isEditMode: boolean = false;
+  idConteoEditando: number | null = null;
+
   constructor() {
     this.counts$ = this.stockService.getAll();
     this.counts$ = this.refresh$.pipe(
@@ -78,7 +85,7 @@ export class Stock {
         const q = (filter || '').trim().toLowerCase();
 
         // Si no tiene rol o no es admin/empleado, devolver vacío
-        if (!(role === 'admin' || role === 'empleado')) return [];
+        if (!this.tieneAcceso(role)) return [];
 
         // lista base (todos los conteos) ordenada por fecha
         let list = counts.slice();
@@ -96,7 +103,7 @@ export class Stock {
     );
 
     this.conteoForm = this.fb.group({
-      idUsuario: [2, Validators.required], // ID del empleado logueado
+      idUsuario: [this.obtenerIdUsuarioLogueado(), Validators.required], // ID del empleado logueado
       descripcion: ['']
     });
   }
@@ -106,6 +113,57 @@ export class Stock {
     this.productoService.getAll().subscribe(data => this.productosDisponibles = data);
     this.insumoService.getAll().subscribe(data => this.insumosDisponibles = data);
   }
+
+  // --- ELIMINAR CONTEO ---
+  eliminarConteo(id: any) {
+    const confirmar = confirm('¿Estás seguro de que deseas eliminar este conteo de stock?');
+    if (confirmar) {
+      this.stockService.delete(id).subscribe({
+        next: () => {
+          console.log('Conteo eliminado exitosamente');
+          this.refresh$.next(); // Recargar la lista de conteos
+        },
+        error: (err) => {
+          console.error('Error al eliminar conteo', err);
+        }
+      });
+    }
+  }
+
+  // --- MODIFICAR CONTEO ---
+  abrirModalEdicion(content: any, count: ConteoStock) {
+    this.limpiarForm();
+    this.isEditMode = true;
+    this.idConteoEditando = count.id;
+
+    // 1. Cargamos datos básicos al formulario (si aplica)
+    this.conteoForm.patchValue({
+      idUsuario: count.usuario?.idUsuario || this.obtenerIdUsuarioLogueado(),
+      // Si tienes otros campos en el form, ponlos aquí
+    });
+
+    // 2. Precargamos el "carrito" de insumos
+    if (count.csinsumosList) {
+      this.insumosContados = count.csinsumosList.map(item => ({
+        idInsumo: Number(item.insumo.id),
+        nombre: item.insumo.nombreInsumo,
+        cantidadStockInsumo: item.cantidadStockInsumo
+      }));
+    }
+
+    // 3. Precargamos el "carrito" de productos 
+    if (count.csproductosList) {
+      this.productosContados = count.csproductosList.map(item => ({
+        idProducto: Number(item.producto.id),
+        nombre: item.producto.nombreProducto,
+        cantidadStockProducto: item.cantidadStockProducto
+      }));
+    }
+
+    // 4. Abrimos el mismo modal
+    this.modalService.open(content, { size: 'lg', centered: true, backdrop: 'static' });
+  }
+
 
   // --- LÓGICA PRODUCTOS ---
   agregarProducto() {
@@ -153,33 +211,50 @@ export class Stock {
     }
 
     const payload = {
-      idUsuario: this.conteoForm.value.idUsuario,
-      productosDTOList: this.productosContados.map(p => ({
+      idUsuario: this.obtenerIdUsuarioLogueado(),
+      productoDTOList: this.productosContados.map(p => ({
         idProducto: p.idProducto,
         cantidadStockProducto: p.cantidadStockProducto
       })),
-      insumosDTOList: this.insumosContados.map(i => ({
+      insumoDTOList: this.insumosContados.map(i => ({
         idInsumo: i.idInsumo,
         cantidadStockInsumo: i.cantidadStockInsumo
       }))
     };
 
-    this.stockService.create(payload).subscribe({
-      next: () => {
-        this.closeModal();
-        this.refresh$.next();
-        setTimeout(() => alert("Conteo de stock registrado correctamente."), 300);
-      },
-      error: (err) => console.error("Error al guardar conteo", err)
-    });
+    //Muestro el payload en consola para depuración
+    console.log("Payload a enviar:", JSON.stringify(payload, null, 2));
+
+    //Preguntamos si es edicion o creacion
+    if (this.isEditMode && this.idConteoEditando) {
+      // Si estamos editando, llamamos a UPDATE
+      this.stockService.update(this.idConteoEditando, payload).subscribe({
+        next: () => {
+          this.closeModal();
+          this.refresh$.next();
+          setTimeout(() => alert("Conteo modificado correctamente."), 300);
+        },
+        error: (err) => console.error("Error al modificar conteo", err)
+      });
+    } else {
+      // Si es nuevo, llamamos a CREATE
+      this.stockService.create(payload).subscribe({
+        next: () => {
+          this.closeModal();
+          this.refresh$.next();
+          setTimeout(() => alert("Conteo registrado correctamente."), 300);
+        },
+        error: (err) => console.error("Error al guardar conteo", err)
+      });
+    }
   }
 
   // --- MODAL ---
   openModal(content: any) {
-    this.modalService.open(content, { size: 'lg', centered: true }).result.then(
-      () => this.limpiarForm(),
-      () => this.limpiarForm()
-    );
+    this.limpiarForm();
+    this.isEditMode = false;
+    this.idConteoEditando = null;
+    this.modalService.open(content, { size: 'lg', centered: true, backdrop: 'static' });
   }
 
   closeModal() {
@@ -187,7 +262,7 @@ export class Stock {
   }
 
   private limpiarForm() {
-    this.conteoForm.reset({ idUsuario: 1, descripcion: '' });
+    this.conteoForm.reset({ idUsuario: this.obtenerIdUsuarioLogueado(), descripcion: '' });
     this.productosContados = [];
     this.insumosContados = [];
     this.tempProductoId = null;
@@ -229,14 +304,14 @@ private parsePrice(precioRaw: any): number {
   return isNaN(precio) ? 0 : precio;
 }
 
-totalValue(): number {
-  // Si no hay conteo seleccionado, el total es 0
-  if (!this.selectedCount) {
+totalValue(c: ConteoStock): number {
+  // Si no hay conteo, el total es 0
+  if (!c) {
     return 0;
   }
 
   // 1. Calcular total de Insumos
-  const listaInsumos = this.selectedCount.csinsumosList || [];
+  const listaInsumos = c.csinsumosList || [];
   const totalInsumos = listaInsumos.reduce((acc, item) => {
     
     const cantidad = Number(item?.cantidadStockInsumo ?? 0);
@@ -245,21 +320,28 @@ totalValue(): number {
     return acc + (cantidad * precio);
   }, 0);
 
-  // 2. Calcular total de Productos
-  // const listaProductos = this.selectedCount.csproductosList || []; 
-  // const totalProductos = listaProductos.reduce((acc, item) => {
-    
-  //   const cantidad = Number(item?.cantidadStockProducto ?? 0); 
-  //   const precio = this.parsePrice(item?.producto?.precioCostoProducto); 
-    
-  //   return acc + (cantidad * precio);
-  // }, 0);
-
-  // 3. Sumar ambos totales
+  // 2. Sumar ambos totales
   const total = totalInsumos;
 
-  // Redondear a 2 decimales
+  // 4. Redondear a 2 decimales
   return Math.round(total * 100) / 100;
+}
+
+tieneAcceso(rolUsuario: string | null): boolean {
+    if (!rolUsuario) return false;
+    const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', ''); // Lo pasa a mayúsculas y le saca el ROLE_ si lo tiene
+    return rolLimpio === 'ADMIN' || rolLimpio === 'EMPLEADO';
+}
+
+obtenerIdUsuarioLogueado(): number {
+    // Verificamos si este código se está ejecutando en el navegador real
+    if (isPlatformBrowser(this.platformId)) {
+      const userId = localStorage.getItem('idUsuario');
+      return userId ? Number(userId) : 2;
+    }
+    
+    // Si se está ejecutando en el servidor (al hacer F5), devolvemos un ID por defecto
+    return 1;
 }
 
 }

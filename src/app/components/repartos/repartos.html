@@ -77,16 +77,15 @@
           </div>
         }
       } @else {
-        <div>Cargando repartos…</div>
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            Cargando repartos…
+          </div>
       }
     } @else {
       <div class="alert alert-secondary">Inicia sesión para ver repartos.</div>
     }
 
-    
-    <!-- <button class="fab btn" title="Nuevo reparto" (click)="crearNuevoReparto()">
-      <i class="bi bi-truck"></i>
-    </button> -->
   </div>
 </section>
 
@@ -185,77 +184,69 @@
 
 <!--MODAL DE ASIGNAR PEDIDO A REPARTO-->
 <ng-template #asignarPedidosModal let-modal>
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      
-      <div class="modal-header bg-light">
-        <h5 class="modal-title" id="asignarPedidosModalLabel">
-          <i class="bi bi-box-seam me-2"></i> 
-          Asignar Pedidos al Reparto #{{ repartoActivoId }}
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+  <div class="modal-header modal-header-red text-white">
+    <h5 class="modal-title" id="asignarPedidosModalLabel">
+      <i class="bi bi-box-seam me-2"></i> 
+      Asignar Pedidos al Reparto #{{ repartoActivoId }}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
 
-      <div class="modal-body p-0">
-        
-        @if (cargandoPedidos) {
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                <div class="mt-2 text-muted">Buscando pedidos disponibles...</div>
-            </div>
-        } @else if (pedidosDisponibles.length === 0) {
-            <div class="alert alert-info m-3 text-center">
-                <i class="bi bi-info-circle me-2"></i> No hay pedidos pendientes de asignación en este momento.
-            </div>
-        } @else {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light sticky-top">
-                        <tr>
-                            <th class="ps-4" style="width: 50px;">Sel.</th>
-                            <th>ID</th>
-                            <th>Cliente</th>
-                            <th>Dirección</th> 
-                            <th class="text-end pe-4">Monto</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (p of pedidosDisponibles; track p.id) {
-                        <tr style="cursor: pointer;" (click)="toggleSeleccionPedido(p.id)">
-                            <td class="ps-4">
-                                <input class="form-check-input" type="checkbox" 
-                                       [checked]="pedidosSeleccionados.has(p.id)"
-                                       (click)="$event.stopPropagation(); toggleSeleccionPedido(p.id)"> 
-                                       </td>
-                            <td class="fw-bold">#{{ p.id }}</td>
-                            <td>{{ p.sucursal.nombreSucursal }}</td>
-                            <td class="text-muted small">{{ p.sucursal.direccionSucursal || 'Retira en local' }}</td>
-                            <td class="text-end pe-4">{{ p.importeTotalPedido | currency:'ARS' }}</td>
-                        </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-      </div>
+  <div class="modal-body p-0">
+    @if (cargandoPedidos) {
+        <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <div class="mt-2 text-muted">Buscando pedidos disponibles...</div>
+        </div>
+    } @else if (pedidosDisponibles.length === 0) {
+        <div class="alert alert-info m-3 text-center">
+            <i class="bi bi-info-circle me-2"></i> No hay pedidos pendientes de asignación en este momento.
+        </div>
+    } @else {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th class="ps-4" style="width: 50px;">Sel.</th>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Dirección</th> 
+                        <th class="text-end pe-4">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (p of pedidosDisponibles; track p.id) {
+                    <tr style="cursor: pointer;" (click)="toggleSeleccionPedido(p.id)">
+                        <td class="ps-4">
+                            <input class="form-check-input" type="checkbox" 
+                                   [checked]="pedidosSeleccionados.has(p.id)"
+                                   (click)="$event.stopPropagation(); toggleSeleccionPedido(p.id)"> 
+                        </td>
+                        <td class="fw-bold">#{{ p.id }}</td>
+                        <td>{{ p.sucursal?.nombreSucursal }}</td>
+                        <td class="text-muted small">{{ p.sucursal?.direccionSucursal || 'Retira en local' }}</td>
+                        <td class="text-end pe-4">{{ p.importeTotalPedido | currency:'ARS' }}</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+  </div>
 
-      <div class="modal-footer justify-content-between bg-light">
-        <div>
-            <span class="badge" 
-                  [ngClass]="pedidosSeleccionados.size > 0 ? 'bg-success' : 'bg-secondary'">
-                {{ pedidosSeleccionados.size }} seleccionados
-            </span>
-        </div>
-        <div>
-            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-primary" 
-                    [disabled]="pedidosSeleccionados.size === 0"
-                    (click)="guardarAsignacion()">
-                Guardar Asignación
-            </button>
-        </div>
-      </div>
-      
+  <div class="modal-footer justify-content-between bg-light">
+    <div>
+        <span class="badge" [ngClass]="pedidosSeleccionados.size > 0 ? 'bg-success' : 'bg-secondary'">
+            {{ pedidosSeleccionados.size }} seleccionados
+        </span>
+    </div>
+    <div>
+        <button type="button" class="btn btn-outline-secondary me-2" (click)="modal.dismiss()">Cancelar</button>
+        <button type="button" class="btn btn-danger" 
+                [disabled]="pedidosSeleccionados.size === 0"
+                (click)="guardarAsignacion()">
+            Guardar Asignación
+        </button>
     </div>
   </div>
 </ng-template>
