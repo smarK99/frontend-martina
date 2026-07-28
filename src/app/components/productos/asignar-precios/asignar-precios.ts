@@ -5,6 +5,17 @@ import { SucursalService } from '../../../services/sucursal-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SucursalProductoDTO, SucursalProductoService } from '../../../services/sucursal-producto-service';
+import { Producto } from '../../../model/producto.model';
+import { ProductoService } from '../../../services/producto-service';
+import { forkJoin } from 'rxjs';
+
+//Para la visualización de los productos y sus precios en el modal, creamos una interfaz que contenga solo los campos necesarios para mostrar en la tabla del modal
+export interface PrecioVisual {
+  id: number;
+  nombreProducto: string;
+  descripcionProducto: string;
+  precio: number;
+}
 
 @Component({
   selector: 'app-asignar-precios',
@@ -17,30 +28,38 @@ export class AsignarPrecios {
   private modalService = inject(NgbModal);
   private sucursalService = inject(SucursalService);
   private sucursalProductoService = inject(SucursalProductoService);
+  private productoService = inject(ProductoService);
 
   sucursales: Sucursal[] = [];
+  allProductos: Producto[] = [];
   cargando = false;
 
   // Variables para el Modal
   @ViewChild('preciosModal') modalPrecios!: TemplateRef<any>;
   sucursalActiva: Sucursal | null = null;
-  listaPrecios: SucursalProducto[] = [];
-  cargandoPrecios = false;
+  
+  //Lista que dibuja el modal con los productos y sus precios para la sucursal seleccionada
+  listaPrecios: PrecioVisual[] = [];
 
   ngOnInit() {
-    this.cargarSucursales();
+    this.cargarDatos();
   }
 
-  cargarSucursales() {
+  cargarDatos() {
     this.cargando = true;
     
-    this.sucursalService.getAll().subscribe({
-      next: (data) => {
-        this.sucursales = data;
+    // Usamos forkJoin para cargar sucursales y productos en paralelo
+    forkJoin({
+      sucursales: this.sucursalService.getAll(),
+      productos: this.productoService.getAll()
+    }).subscribe({
+      next: (resultados) => {
+        this.sucursales = resultados.sucursales;
+        this.allProductos = resultados.productos;
         this.cargando = false;
       },
       error: (err) => {
-        console.error('Error al cargar sucursales', err);
+        console.error('Error al cargar datos base', err);
         this.cargando = false;
       }
     });
@@ -48,13 +67,23 @@ export class AsignarPrecios {
 
   abrirModalPrecios(sucursal: Sucursal) {
     this.sucursalActiva = sucursal;
-    
+
+    this.listaPrecios = this.allProductos.map(producto => {
+      const sucursalProducto = sucursal.sucursalProductoList.find(sp => sp.producto.id === producto.id); //Buscamos el precio actual del producto en la sucursal seleccionada 
+      return {
+        id: Number(producto.id),
+        nombreProducto: producto.nombreProducto,
+        descripcionProducto: producto.descripcionProducto,
+        precio: sucursalProducto ? sucursalProducto.precioSucursalProducto : 0 //Si no hay precio asignado, lo inicializamos en 0
+      };
+    });
+
     // Abrimos el modal instantáneamente con diseño rojo y scroll
     this.modalService.open(this.modalPrecios, { 
       size: 'lg', 
       centered: true,
-      scrollable: true, // <-- CLAVE: Permite scroll interno si hay muchos productos
-      backdrop: 'static'
+      scrollable: true, // Permite scroll interno si hay muchos productos
+      backdrop: 'static' // Evita cerrar el modal al hacer clic fuera
     });
   } 
   
@@ -65,11 +94,11 @@ export class AsignarPrecios {
     const idSucursalActual = this.sucursalActiva.id;
 
     // 2. ARMADO DEL DTO: Recorremos los productos de esta sucursal y extraemos solo lo necesario
-    const payloadDTOs = this.sucursalActiva.sucursalProductoList.map(item => {
+    const payloadDTOs = this.listaPrecios.map(item => {
       return {
-        idProducto: Number(item.producto.id),
+        idProducto: Number(item.id),
         idSucursal: Number(idSucursalActual),
-        precioSP: item.precioSucursalProducto
+        precioSP: item.precio
       };
     });
 

@@ -58,17 +58,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for (item of sucursalActiva?.sucursalProductoList; track item.producto.id) {
+                    @for (item of listaPrecios; track item.id) {
                     <tr>
-                        <td class="ps-3 text-muted">#{{ item.producto.id }}</td>
-                        <td class="fw-semibold">{{ item.producto.nombreProducto }}</td>
+                        <td class="ps-3 text-muted">#{{ item.id }}</td>
+                        <td class="fw-semibold">{{ item.nombreProducto }}</td>
                         <td class="pe-3">
                             <div class="input-group input-group-sm justify-content-end">
                                 <span class="input-group-text bg-light">$</span>
                                 <input type="number" 
                                        class="form-control fw-bold text-success text-end" 
                                        style="max-width: 100px;"
-                                       [(ngModel)]="item.precioSucursalProducto"
+                                       [(ngModel)]="item.precio"
                                        min="0" step="100">
                             </div>
                         </td>
