@@ -16,6 +16,7 @@ export interface ConteoStockInsumo {
 export interface ConteoStock {
   id: number;
   fechaHoraAltaConteoStock: string;
+  fechaHoraBajaConteoStock: string;
   usuario: Usuario;
   csproductosList: ConteoStockProducto[];
   csinsumosList: ConteoStockInsumo[];

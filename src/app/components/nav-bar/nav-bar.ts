@@ -6,13 +6,11 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { map } from 'rxjs'; 
 
 import { AuthService } from '../../services/auth-service';
-// Ajustá la ruta de tu UsuarioService según cómo lo tengas en tu proyecto
 import { UsuarioService } from '../../services/usuario.service'; 
 
 @Component({
   selector: 'app-nav-bar',
   standalone: true,
-  // ¡CLAVE! Sumamos ReactiveFormsModule a los imports
   imports: [CommonModule, RouterModule, ReactiveFormsModule], 
   templateUrl: './nav-bar.html',
   styleUrls: ['./nav-bar.css']

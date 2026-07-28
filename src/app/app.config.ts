@@ -1,24 +1,21 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
-import { provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withHashLocation } from '@angular/router';
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
-// 1. Importamos el que pone el Token
+// 1. Importamos el que inyecta el Token en las cabeceras
 import { jwtInterceptor } from './interceptors/jwt.interceptor';
-// 2. Importamos el que echa al usuario si hay un 401
+// 2. Importamos el que maneja el Refresh Token y ataja el Error 401
 import { authInterceptor } from './interceptors/auth-interceptor'; 
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes), 
     provideClientHydration(withEventReplay()),
     
-    // 3. UN SOLO provideHttpClient, y adentro la lista de interceptores separados por coma
-    // Nota: El orden es clave. Primero agregamos el token, y después escuchamos posibles errores.
+    // 3. Registramos AMBOS interceptores. El orden es clave: primero token, después errores.
     provideHttpClient(
       withInterceptors([jwtInterceptor, authInterceptor])
     )

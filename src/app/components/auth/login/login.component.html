@@ -49,7 +49,6 @@
                    [(ngModel)]="loginUsuario.password"
                    #password="ngModel" required
                    >
-                  <!-- placeholder="••••••••" Si quiero agregar algo de ejemplo-->
 
             <button class="password-toggle-custom" 
                     type="button" 
@@ -66,6 +65,7 @@
             </div>
           }
         </div>
+
         <button type="submit" class="btn btn-danger w-100 py-2 fw-bold" [disabled]="isLoading">
           @if (isLoading) {
             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -75,8 +75,7 @@
           }
         </button>
         
-
-        <!-- Ponelo abajo de tu botón de Login -->
+        <!-- Enlace de recuperación -->
         <div class="text-center mt-3">
           <a href="javascript:void(0)" class="text-decoration-none text-danger" (click)="abrirModalRecuperacion(modalRecuperacion)">
             ¿Olvidaste tu contraseña?

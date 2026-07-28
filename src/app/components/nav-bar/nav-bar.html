@@ -63,18 +63,8 @@
                     }
                 }
 
-                <!-- ACÁ ESTÁ EL CAMBIO DE LA ALINEACIÓN Y LA PASTILLA DEL ROL -->
                 <!-- Zona de Botones y Perfil -->
                 <li class="nav-item ms-lg-4 d-flex align-items-center gap-2">
-                    
-                    <!-- PASTILLA DE ROL COMENTADA PARA LIMPIAR LA INTERFAZ
-                    @if (displayRole$ | async; as displayRole) {
-                    <span class="badge bg-white text-danger border border-white px-3 py-2 rounded-pill shadow-sm d-flex align-items-center">
-                        <i class="bi bi-person-badge me-1"></i> Rol: {{ displayRole === 'DUENIO' ? 'DUEÑO' : displayRole }}
-                    </span>
-                    }
-                    -->
-                    
                     @if (!(isLoggedIn$ | async)) {
                     <button class="btn btn-light btn-sm" routerLink="/login">
                         <i class="bi bi-box-arrow-in-right"></i> Login

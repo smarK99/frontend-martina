@@ -58,7 +58,7 @@ export class AuthService {
         if (isPlatformBrowser(this.platformId)) {
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', data.username);
-          // --- LÍNEA NUEVA: Guardamos el Refresh Token ---
+          // Guardamos el Refresh Token
           if (data.refreshToken) {
             localStorage.setItem('refreshToken', data.refreshToken);
           }
@@ -73,7 +73,7 @@ export class AuthService {
     );
   }
 
-  // --- NUEVO MÉTODO: Pide un Access Token nuevo usando el Refresh Token ---
+  // Pide un Access Token nuevo usando el Refresh Token
   public refreshToken(): Observable<JwtDto> {
     const refreshToken = this.getRefreshToken();
     return this.httpClient.post<JwtDto>(this.authURL + 'refresh', { refreshToken }).pipe(
@@ -91,7 +91,7 @@ export class AuthService {
   public logout() {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken'); // <-- Limpiamos también el Refresh Token
+      localStorage.removeItem('refreshToken'); 
       localStorage.removeItem('user');
       localStorage.removeItem('role'); 
     }

@@ -93,7 +93,6 @@ export class Pedidos implements OnInit {
       switchMap(() => this.pedidoService.getAll())
     );
 
-    // Lógica reactiva de filtrado y roles
     // Lógica reactiva de filtrado y roles (Blindado)
     this.visiblePedidos$ = combineLatest([this.pedidos$, this.role$, this.filter$]).pipe(
       map(([pedidos, role, filter]) => {

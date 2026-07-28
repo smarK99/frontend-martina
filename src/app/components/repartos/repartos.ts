@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; // Añadido switchMap
+import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; 
 import { RepartosService } from '../../services/repartos-service';
 import { PedidoService } from '../../services/pedido-service';
 import { AuthService } from '../../services/auth-service';
@@ -79,12 +79,12 @@ export class Repartos implements OnInit {
       switchMap(() => this.repartosService.getAll())
     );
 
-    // Tu lógica original de filtrado por roles (INTACTA)
+    // Tu lógica original de filtrado por roles (INTACTA Y SEGURA)
     this.visibleRepartos$ = combineLatest([this.repartos$, this.role$, this.filter$]).pipe(
       map(([repartos, role, filter]) => {
         const q = (filter || '').trim().toLowerCase();
 
-        // 1) Base según rol (Usando nomenclatura de Spring Security)
+        // 1) Base según rol (Usando nomenclatura estricta)
         let list: Reparto[] = [];
         if (!role) return [];
 

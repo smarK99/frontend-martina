@@ -14,11 +14,19 @@ export class ConteoStockService {
 
   constructor(private http: HttpClient) { }
 
-  getAll(): Observable<ConteoStock[]> {
-    return this.http.get<ConteoStock[]>(`${this.baseUrl}/getAll`);
+  getAll(): Observable<any> {
+    return this.http.get<any[]>(`${this.baseUrl}`);
   }
 
   create(stockDTO: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/crear`, stockDTO);
+  }
+
+  delete(id: any): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/delete/${id}`);
+  }
+
+  update(id: any, stockDTO: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/update/${id}`, stockDTO);
   }
 }

@@ -4,30 +4,32 @@ import { Pedidos } from './components/pedidos/pedidos';
 import { Stock } from './components/stock/stock';
 import { Estadisticas } from './components/estadisticas/estadisticas';
 import { Repartos } from './components/repartos/repartos';
-// Agregamos los imports correctos basados en tu estructura:
+
+// Importaciones de Seguridad y Autenticación
 import { LoginComponent } from './components/auth/login/login.component'; 
-import { authGuard } from './guards/auth.guard'; 
-import { Usuarios } from './components/usuarios/usuarios';
-import { roleGuard } from './guards/role.guard'; // <-- 1. Importamos el guardia
 import { ResetPasswordComponent } from './components/auth/reset-password/reset-password';
+import { Usuarios } from './components/usuarios/usuarios';
+import { authGuard } from './guards/auth.guard'; 
+import { roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
     { 
         path: 'login', 
         component: LoginComponent 
     },
-
     { 
-    path: 'reset-password', component: ResetPasswordComponent 
+        path: 'reset-password', 
+        component: ResetPasswordComponent 
     },
-
     { 
         // La vidriera es pública, no lleva guard
         path: 'productos', 
         component: Productos 
     },
     { 
-        path: 'usuarios', component: Usuarios 
+        path: 'usuarios', 
+        component: Usuarios,
+        canActivate: [roleGuard] // Candado específico para usuarios
     },
     { 
         path: 'pedidos', 
@@ -54,21 +56,14 @@ export const routes: Routes = [
         data: { roles: ['ROLE_ADMIN', 'ROLE_DUENIO'] }
     },
     { 
-        path: '', pathMatch: 'full', redirectTo: 'productos' 
+        // Redirección inicial a la vista pública
+        path: '', 
+        pathMatch: 'full', 
+        redirectTo: 'productos' 
     },
     { 
-        path: '**', redirectTo: 'productos' 
-    }, // Catch-all para URLs que no existen
-
-
-    { path: 'usuarios', 
-    component: Usuarios,
-    canActivate: [roleGuard] // <-- 2. Le ponemos el candado a la ruta
-  },
-
-  // Ruta comodín por si escriben cualquier cosa
-  { 
-    path: '**', redirectTo: 'productos' 
-}
-
+        // Ruta comodín por si escriben cualquier cosa
+        path: '**', 
+        redirectTo: 'productos' 
+    }
 ];
