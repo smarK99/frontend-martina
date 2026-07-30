@@ -323,3 +323,26 @@
     <button type="button" class="btn btn-danger px-4" (click)="confirmarEliminacion()">Sí, eliminar</button>
   </div>
 </ng-template>
+
+<!-- Modal de Alerta Genérica (Éxito / Error) -->
+<ng-template #alertaModal let-modal>
+  <div class="modal-body text-center py-4">
+    
+    @if (tipoAlerta === 'exito') {
+      <i class="bi bi-check-circle-fill text-success d-block mb-3 animate__animated animate__bounceIn" style="font-size: 3.5rem;"></i>
+      <h5 class="fw-bold text-success">¡Éxito!</h5>
+    } @else {
+      <i class="bi bi-x-circle-fill text-danger d-block mb-3 animate__animated animate__shakeX" style="font-size: 3.5rem;"></i>
+      <h5 class="fw-bold text-danger">¡Error!</h5>
+    }
+    
+    <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
+  </div>
+  
+  <!-- Solo mostramos el botón de cerrar si es un error, el de éxito se cierra solo -->
+  @if (tipoAlerta === 'error') {
+    <div class="modal-footer border-0 justify-content-center bg-light">
+      <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>
+    </div>
+  }
+</ng-template>

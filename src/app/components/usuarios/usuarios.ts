@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, TemplateRef } from '@angular/core';
+import { Component, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
@@ -38,6 +38,15 @@ export class Usuarios implements OnInit {
   rolesSeleccionados: string[] = [];
   usuarioParaRolesId: number | null = null;
 
+  // ==========================================
+  // ALERTA GENÉRICA Y CONFIRMACIÓN DE BAJA
+  // ==========================================
+  @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' = 'exito';
+  
+  usuarioABajar: number | null = null;
+
   constructor() {
     this.usuarioForm = this.fb.group({
       nombreApellido: ['', Validators.required],
@@ -55,6 +64,19 @@ export class Usuarios implements OnInit {
   }
 
   ngOnInit() {}
+
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    
+    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+
+    if (tipo === 'exito') {
+      setTimeout(() => {
+        this.modalService.dismissAll();
+      }, 2000);
+    }
+  }
 
   // --- MODALES ALTA Y EDICIÓN ---
   abrirModalAlta(modal: TemplateRef<any>) {
@@ -122,11 +144,11 @@ export class Usuarios implements OnInit {
         next: () => {
           this.closeModal();
           this.refresh$.next(); 
-          alert('Usuario actualizado con éxito.');
+          setTimeout(() => this.mostrarAlerta('Usuario actualizado con éxito.', 'exito'), 300);
         },
         error: (err) => {
           console.error(err);
-          alert('Error al actualizar el usuario.');
+          this.mostrarAlerta('Error al actualizar el usuario.', 'error');
         }
       });
       
@@ -144,28 +166,35 @@ export class Usuarios implements OnInit {
         next: () => {
           this.closeModal();
           this.refresh$.next(); 
-          alert('Usuario registrado con éxito.');
+          setTimeout(() => this.mostrarAlerta('Usuario registrado con éxito.', 'exito'), 300);
         },
         error: (err) => {
           console.error(err);
-          alert('Error al registrar el usuario.');
+          this.mostrarAlerta('Error al registrar el usuario.', 'error');
         }
       });
     }
   }
 
-  darDeBaja(codUsuario: number) {
-    if (confirm('¿Estás seguro de que querés dar de baja a este usuario? Esta acción es lógica y registrará la fecha actual.')) {
-      const payloadBaja = { codUsuario: codUsuario };
+  abrirModalBaja(codUsuario: number, modalTemplate: any) {
+    this.usuarioABajar = codUsuario;
+    this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+  }
+
+  confirmarBaja() {
+    if (this.usuarioABajar) {
+      const payloadBaja = { codUsuario: this.usuarioABajar };
       
       this.usuarioService.baja(payloadBaja).subscribe({
         next: () => {
+          this.modalService.dismissAll();
+          this.usuarioABajar = null;
           this.refresh$.next();
-          alert('El usuario fue dado de baja exitosamente.');
+          setTimeout(() => this.mostrarAlerta('El usuario fue dado de baja exitosamente.', 'exito'), 300);
         },
         error: (err) => {
           console.error(err);
-          alert('Error al dar de baja.');
+          this.mostrarAlerta('Error al dar de baja al usuario.', 'error');
         }
       });
     }
@@ -194,7 +223,6 @@ export class Usuarios implements OnInit {
     } else {
       this.rolesSeleccionados = this.rolesSeleccionados.filter(r => r !== rol);
     }
-    // Agregamos este chismoso:
     console.log("Rol clickeado:", rol, "| Estado actual de la lista:", this.rolesSeleccionados);
   }
 
@@ -205,18 +233,17 @@ export class Usuarios implements OnInit {
       roles: this.rolesSeleccionados
     };
     
-    // Agregamos este chismoso antes de mandarlo a Java:
     console.log(">>> ENVIANDO A JAVA EL PAYLOAD:", payload);
     
     this.usuarioService.actualizarRoles(payload).subscribe({
       next: () => {
         this.modalService.dismissAll();
         this.refresh$.next();
-        alert('Permisos actualizados correctamente.');
+        setTimeout(() => this.mostrarAlerta('Permisos actualizados correctamente.', 'exito'), 300);
       },
       error: (err) => {
         console.error(err);
-        alert('Error al actualizar permisos.');
+        this.mostrarAlerta('Error al actualizar permisos.', 'error');
       }
     });
   }

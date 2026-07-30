@@ -13,6 +13,8 @@ import { ActionBar } from '../action-bar/action-bar';
 import { ProductoService } from '../../services/producto-service';
 import { SucursalService } from '../../services/sucursal-service';
 
+import { ViewChild, TemplateRef } from '@angular/core';
+
 // --- INTERFACES LOCALES ---
 interface itemCarrito {
   productoId: number;
@@ -77,6 +79,29 @@ export class Pedidos implements OnInit {
   isLoadingDetalle: boolean = false;
 
 
+  // ==========================================
+  // ALERTA GENÉRICA (ÉXITO / ERROR)
+  // ==========================================
+  @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' = 'exito';
+
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    
+    // Abrimos el modal con backdrop 'static' para que el usuario no lo cierre clickeando afuera si es un error
+    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+
+    // Si es éxito, lo cerramos automáticamente a los 2 segundos
+    if (tipo === 'exito') {
+      setTimeout(() => {
+        this.modalService.dismissAll();
+      }, 2000);
+    }
+  }
+
+  
   // ==========================================
   // 3. CONSTRUCTOR Y CICLO DE VIDA
   // ==========================================
@@ -244,18 +269,17 @@ export class Pedidos implements OnInit {
           this.closeModal();
           this.refresh$.next();
           setTimeout(() => {
-            alert('¡Pedido registrado con éxito!');
+          this.mostrarAlerta('¡Pedido registrado con éxito!', 'exito');
           }, 300);
         },
         error: (err) => {
-          console.error('Error al intentar guardar el pedido:', err);
-          alert('Hubo un error al guardar el pedido. Revisa la consola.');
+          this.mostrarAlerta('Hubo un error al guardar el pedido. Revisa la consola.', 'error');
         }
       });
     } else {
       this.pedidoForm.markAllAsTouched();
       if (this.itemsDelPedido.length === 0) {
-        alert('Debes seleccionar una sucursal y agregar al menos un producto al pedido.');
+        this.mostrarAlerta('Debes seleccionar una sucursal y agregar al menos un producto al pedido.', 'error');
       }
     }
   }
@@ -302,13 +326,18 @@ export class Pedidos implements OnInit {
     if (this.pedidoACancelar) {
       this.pedidoService.cancelarPedido(this.pedidoACancelar).subscribe({
         next: (respuesta) => {
-          this.modalService.dismissAll(); // Cerramos el modal
-          this.pedidoACancelar = null;    // Limpiamos la variable
-          this.refresh$.next();           // Recargamos la tabla al instante
+          this.modalService.dismissAll(); 
+          this.pedidoACancelar = null;    
+          this.refresh$.next();           
+          
+          // ACÁ USAMOS LA ALERTA NUEVA DE ÉXITO
+          this.mostrarAlerta('El pedido ha sido cancelado exitosamente.', 'exito');
         },
         error: (err) => {
           console.error('Error al cancelar el pedido:', err);
-          alert('Ocurrió un error al intentar cancelar el pedido.');
+          
+          // ACÁ USAMOS LA ALERTA NUEVA DE ERROR
+          this.mostrarAlerta('Ocurrió un error al intentar cancelar el pedido.', 'error');
         }
       });
     }
