@@ -28,4 +28,9 @@ export class PedidoService {
     return this.http.get(`${this.baseUrl}/pedido/disponibles_reparto`);
   }
 
+  // --- NUEVO MÉTODO: Cancelar Pedido ---
+  cancelarPedido(id: number): Observable<any> {
+    return this.http.put(`${this.baseUrl}/pedido/cancelar/${id}`, {});
+  }
+
 }

@@ -117,16 +117,27 @@ export class Stock {
   }
 
   // --- ELIMINAR CONTEO ---
-  eliminarConteo(id: any) {
-    const confirmar = confirm('¿Estás seguro de que deseas eliminar este conteo de stock?');
-    if (confirmar) {
-      this.stockService.delete(id).subscribe({
+  // Variable para guardar el ID del conteo a eliminar
+  conteoAEliminar: number | null = null;
+
+  // 1. Abre el modal de confirmación
+  abrirModalEliminacion(id: number, modalTemplate: any) {
+    this.conteoAEliminar = id;
+    this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+  }
+
+  // 2. Ejecuta la eliminación si hace clic en "Sí, eliminar"
+  confirmarEliminacion() {
+    if (this.conteoAEliminar) {
+      this.stockService.delete(this.conteoAEliminar).subscribe({
         next: () => {
-          console.log('Conteo eliminado exitosamente');
-          this.refresh$.next(); // Recargar la lista de conteos
+          this.modalService.dismissAll(); // Cierra el modal
+          this.conteoAEliminar = null;    // Limpia la variable
+          this.refresh$.next();           // Recarga la tabla
         },
         error: (err) => {
           console.error('Error al eliminar conteo', err);
+          alert('Error al intentar eliminar el conteo.'); // Por ahora dejamos este alert, luego lo mejoramos
         }
       });
     }

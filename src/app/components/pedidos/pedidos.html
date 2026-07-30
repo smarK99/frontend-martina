@@ -42,7 +42,7 @@
 
     <!-- Tabla de pedidos -->
     @if (visiblePedidos$ | async; as pedidos) {
-    @if (pedidos$ === null) {
+    @if (pedidos.length === 0) {
     <div class="alert alert-info">No hay pedidos para mostrar.</div>
     } @else {
     <div class="table-responsive">
@@ -67,13 +67,21 @@
             <td>
               <span class="badge" [ngClass]="{
                       'bg-success': p.estadoPedido.nombreEstadoPedido ==='ENTREGADO',
+                      'bg-danger': p.estadoPedido.nombreEstadoPedido ==='CANCELADO',
                       'bg-warning text-dark': p.estadoPedido.nombreEstadoPedido==='EN PREPARACIÓN' || p.estadoPedido.nombreEstadoPedido==='ENVIADO',
-                      'bg-secondary': p.estadoPedido.nombreEstadoPedido!=='ENTREGADO' && p.estadoPedido.nombreEstadoPedido!=='EN PREPARACIÓN'
+                      'bg-secondary': p.estadoPedido.nombreEstadoPedido!=='ENTREGADO' && p.estadoPedido.nombreEstadoPedido!=='CANCELADO' && p.estadoPedido.nombreEstadoPedido!=='EN PREPARACIÓN'
                     }">{{ p.estadoPedido.nombreEstadoPedido }}</span>
             </td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-primary me-1"
                 (click)="abrirModalDetalle(p.id, detallePedidoModal)">Ver</button>
+              
+              <!-- Botón de Cancelar: Solo para clientes y si el pedido es válido para cancelación -->
+              @if ((role$ | async) === 'ROLE_CLIENTE' && p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO' && p.estadoPedido.nombreEstadoPedido !== 'CANCELADO') {
+                <button class="btn btn-sm btn-outline-danger me-1" (click)="abrirModalCancelacion(p.id, confirmarCancelacionModal)">
+                Cancelar
+                </button>
+              }
             </td>
           </tr>
           }
@@ -287,4 +295,23 @@
     <button type="button" class="btn btn-danger" (click)="cerrarModalDetalle()">Cerrar</button>
   </div>
 
+</ng-template>
+
+<!-- Modal Confirmar Cancelación -->
+<ng-template #confirmarCancelacionModal let-modal>
+  <div class="modal-header bg-danger text-white border-0">
+    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Cancelar Pedido</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  
+  <div class="modal-body text-center py-4">
+    <i class="bi bi-x-circle text-danger mb-3 d-block" style="font-size: 3rem;"></i>
+    <p class="fs-5 mb-1">¿Estás seguro de que deseas cancelar el pedido <strong>#{{ pedidoACancelar }}</strong>?</p>
+    <p class="text-muted small">Esta acción no se puede deshacer.</p>
+  </div>
+  
+  <div class="modal-footer bg-light border-0 justify-content-center">
+    <button type="button" class="btn btn-outline-secondary px-4" (click)="modal.dismiss()">No, volver</button>
+    <button type="button" class="btn btn-danger px-4" (click)="confirmarCancelacion()">Sí, cancelar</button>
+  </div>
 </ng-template>

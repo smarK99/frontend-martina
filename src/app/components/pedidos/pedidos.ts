@@ -61,7 +61,7 @@ export class Pedidos implements OnInit {
   pedidos$!: Observable<any[]>;
   visiblePedidos$!: Observable<any[]>;
   private CURRENT_CLIENT_ID = 1;
-  //Señal para forzar recarga de datos después de crear un pedido (si es que no queremos recargar toda la página)
+  //Señal para forzar recarga de datos después de crear o cancelar un pedido
   private refresh$ = new BehaviorSubject<void>(undefined);
 
   // -- Modal Alta Pedido --
@@ -140,11 +140,6 @@ export class Pedidos implements OnInit {
     });
   }
 
-  //Cada vez que el usuario cambia la sucursal seleccionada, 
-  // necesitamos actualizar la lista de productos disponibles 
-  // y sus precios según esa sucursal. Para eso, nos suscribimos 
-  // a los cambios del selector de sucursal y actualizamos la lista 
-  // de productos en consecuencia.
   listenerCambioSucursal() {
     this.pedidoForm.get('idSucursal')?.valueChanges.subscribe(sucursalId => {
 
@@ -154,41 +149,22 @@ export class Pedidos implements OnInit {
         return;
       }
 
-      // 2. Buscamos el objeto sucursal completo en el array que cargamos al inicio.
-      // (Usamos == loose equality por si el ID viene como string desde el select)
       const sucursalSeleccionada = this.sucursales.find(s => s.id == sucursalId);
 
-      // 3. Verificamos que la sucursal exista y tenga la lista de productos-precios
       if (sucursalSeleccionada && sucursalSeleccionada.sucursalProductoList && sucursalSeleccionada.sucursalProductoList.length > 0) {
-
-        console.log('Sucursal seleccionada:', sucursalSeleccionada.nombreSucursal);
-        console.log('Lista de precios cruda (Backend):', sucursalSeleccionada.sucursalProductoList);
-
-        // 4.Iteramos SOBRE LA RELACIÓN (SucursalProducto), no sobre productos globales.
         this.productosDisponibles = sucursalSeleccionada.sucursalProductoList.map((sp: any) => {
-          // 'sp' es un objeto SucursalProducto
           return {
-            // Usamos el ID del producto como valor para el select
             id: sp.producto.id || sp.producto.codProducto,
-            // Usamos el nombre anidado del producto
             nombre: sp.producto.nombreProducto,
-            // Usamos el precio específico de esta relación
             precio: sp.precioSucursalProducto
           };
         });
-
-        console.log('Productos disponibles mapeados para el select:', this.productosDisponibles);
-
       } else {
-        // Si la sucursal no tiene productos asignados en la tabla intermedia
         console.warn('Esta sucursal no tiene precios asignados.');
         this.productosDisponibles = [];
       }
 
-      // Siempre limpiamos los inputs temporales al cambiar de sucursal
       this.tempProductoId = null;
-      // Opcional: si quieres limpiar el carrito al cambiar de sucursal, descomenta esto:
-      // this.itemsDelPedido = []; 
     });
   }
 
@@ -198,19 +174,11 @@ export class Pedidos implements OnInit {
   // ==========================================
 
   openModal(modalTemplate: any) {
-    // Abrimos el modal y guardamos la referencia
     const modalRef = this.modalService.open(modalTemplate, { size: 'lg', centered: true });
 
-    // Escuchamos cuando el modal se cierra (por CUALQUIER motivo)
     modalRef.result.then(
-      (result) => { 
-        // Se ejecuta si se cierra con éxito (ej: modal.close())
-        this.limpiarFormularioAlta(); 
-      },
-      (reason) => { 
-        // Se ejecuta si se descarta (clic afuera, botón X, ESC, o dismissAll())
-        this.limpiarFormularioAlta(); 
-      }
+      (result) => { this.limpiarFormularioAlta(); },
+      (reason) => { this.limpiarFormularioAlta(); }
     );
   }
 
@@ -222,16 +190,11 @@ export class Pedidos implements OnInit {
     this.tempCantidad = 1;
   }
 
-  // Extraemos la limpieza a una función privada para mantener el orden
   private limpiarFormularioAlta() {
-    // 1. Resetea el form y el select
     this.pedidoForm.reset({ idSucursal: '' }); 
-    // 2. Limpia el carrito
     this.itemsDelPedido = [];
-    // 3. Limpia las variables temporales
     this.tempProductoId = null;
     this.tempCantidad = 1;
-    // 4. Limpia la lista del dropdown de productos
     this.limpiarSeleccionProductos();
   }
 
@@ -266,46 +229,20 @@ export class Pedidos implements OnInit {
   }
 
   guardarPedido() {
-    // 1. Verificamos que el formulario sea válido y haya items
     if (this.pedidoForm.valid && this.itemsDelPedido.length > 0) {
-      
-      // 2. Armamos el Payload (DTO) EXACTO que pide el backend
       const payload = {
-        // Forzamos a Number por si el select guardó un string
         idSucursal: Number(this.pedidoForm.value.idSucursal), 
-        
-        // Mapeamos el campo 'descripcion' del form a 'descripcionPedido'
         descripcionPedido: this.pedidoForm.value.descripcion || '', 
-        
-        // 3. Transformamos nuestro carrito a la lista que pide el backend
         dpdtoList: this.itemsDelPedido.map(item => ({
           idProducto: item.productoId,
           cantidadDetallePedido: item.cantidad
         }))
       };
 
-      console.log('Enviando DTO al Backend:', payload);
-
-      //4. Llamamos al servicio para guardar
       this.pedidoService.create(payload).subscribe({
         next: (respuesta) => {
-          console.log('Pedido guardado exitosamente:', respuesta);
-          
-          // Opcional: Si quieres que la tabla principal se actualice sola, 
-          // debes volver a llamar a tu servicio getAll() o agregar el nuevo 
-          // pedido a tu lista local. Lo más simple es:
-          // this.pedidos$ = this.pedidoService.getAll(); 
-          // (Aunque como usas combineLatest en el constructor, podríamos necesitar 
-          // un refetcher. Por ahora probemos que guarde).
-
-          //Cerramos el modal (esto disparará la limpieza que hicimos antes)
           this.closeModal();
-          
-          // Esto avisa al constructor que debe volver a hacer el getAll()
-          // Y como el combineLatest está conectado, la tabla se actualizará sola.
           this.refresh$.next();
-          
-          //Esperamos 300ms para que el modal desaparezca visualmente antes de lanzar el alert
           setTimeout(() => {
             alert('¡Pedido registrado con éxito!');
           }, 300);
@@ -315,9 +252,7 @@ export class Pedidos implements OnInit {
           alert('Hubo un error al guardar el pedido. Revisa la consola.');
         }
       });
-
     } else {
-      // Si el form es inválido, marcamos todo para que salten los errores rojos
       this.pedidoForm.markAllAsTouched();
       if (this.itemsDelPedido.length === 0) {
         alert('Debes seleccionar una sucursal y agregar al menos un producto al pedido.');
@@ -327,7 +262,7 @@ export class Pedidos implements OnInit {
 
 
   // ==========================================
-  // 5. LÓGICA: MODAL VER DETALLE
+  // 5. LÓGICA: MODAL VER DETALLE Y CANCELAR
   // ==========================================
 
   abrirModalDetalle(pedidoId: number, modalTemplate: any) {
@@ -337,7 +272,6 @@ export class Pedidos implements OnInit {
 
     this.pedidoService.getOne(pedidoId).subscribe({
       next: (pedido: any) => {
-        // Asignamos el pedido directamente desde el backend a la variable
         this.selectedPedido = pedido;
         this.isLoadingDetalle = false;
       },
@@ -353,6 +287,33 @@ export class Pedidos implements OnInit {
     this.selectedPedido = null;
   }
 
+  // --- NUEVO MÉTODO: CANCELAR PEDIDO ---
+  // Variable para guardar temporalmente el ID del pedido a cancelar
+  pedidoACancelar: number | null = null;
+
+  // 1. Abre el modal bonito de Bootstrap
+  abrirModalCancelacion(id: number, modalTemplate: any) {
+    this.pedidoACancelar = id;
+    this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+  }
+
+  // 2. Ejecuta la cancelación si el usuario hace clic en "Sí, cancelar"
+  confirmarCancelacion() {
+    if (this.pedidoACancelar) {
+      this.pedidoService.cancelarPedido(this.pedidoACancelar).subscribe({
+        next: (respuesta) => {
+          this.modalService.dismissAll(); // Cerramos el modal
+          this.pedidoACancelar = null;    // Limpiamos la variable
+          this.refresh$.next();           // Recargamos la tabla al instante
+        },
+        error: (err) => {
+          console.error('Error al cancelar el pedido:', err);
+          alert('Ocurrió un error al intentar cancelar el pedido.');
+        }
+      });
+    }
+  }
+
   // ==========================================
   // 6. FUNCIONES HELPER (UTILIDADES)
   // ==========================================
@@ -366,7 +327,6 @@ export class Pedidos implements OnInit {
     return d.toLocaleString();
   }
 
-  // Helper para limpiar cuando se cierra el modal o se deselecciona
   private limpiarSeleccionProductos() {
     this.productosDisponibles = [];
     this.tempProductoId = null;
