@@ -1,4 +1,3 @@
-
 <!--Modal con formulario-->
 <ng-template #altaProductoModal let-modal>
 
@@ -137,7 +136,8 @@
                     <button class="btn btn-sm btn-outline-secondary border-0" title="Editar Producto">
                       <i class="bi bi-pencil-square fs-5"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger border-0" title="Eliminar Producto">
+                    <!-- ACTUALIZADO: Botón que dispara el modal de Baja -->
+                    <button class="btn btn-sm btn-outline-danger border-0" title="Eliminar Producto" (click)="abrirModalBaja(p.id, confirmarBajaModal)">
                       <i class="bi bi-trash-fill fs-5"></i>
                     </button>
                   </div>
@@ -152,3 +152,44 @@
     </div>
   </div>
 </section>
+
+<!-- Modal Confirmar Baja -->
+<ng-template #confirmarBajaModal let-modal>
+  <div class="modal-header bg-danger text-white border-0">
+    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar Producto</h5>
+    <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  
+  <div class="modal-body text-center py-4">
+    <i class="bi bi-archive-fill text-danger mb-3 d-block" style="font-size: 3rem;"></i>
+    <p class="fs-5 mb-1">¿Estás seguro de que deseás dar de baja este producto?</p>
+    <p class="text-muted small">El producto dejará de estar disponible para nuevos pedidos, pero se mantendrá el historial.</p>
+  </div>
+  
+  <div class="modal-footer bg-light border-0 justify-content-center">
+    <button type="button" class="btn btn-outline-secondary px-4" (click)="modal.dismiss()">No, volver</button>
+    <button type="button" class="btn btn-danger px-4" (click)="confirmarBaja()">Sí, eliminar</button>
+  </div>
+</ng-template>
+
+<!-- Modal de Alerta Genérica (Éxito / Error) -->
+<ng-template #alertaModal let-modal>
+  <div class="modal-body text-center py-4">
+    
+    @if (tipoAlerta === 'exito') {
+      <i class="bi bi-check-circle-fill text-success d-block mb-3 animate__animated animate__bounceIn" style="font-size: 3.5rem;"></i>
+      <h5 class="fw-bold text-success">¡Éxito!</h5>
+    } @else {
+      <i class="bi bi-x-circle-fill text-danger d-block mb-3 animate__animated animate__shakeX" style="font-size: 3.5rem;"></i>
+      <h5 class="fw-bold text-danger">¡Error!</h5>
+    }
+    
+    <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
+  </div>
+  
+  @if (tipoAlerta === 'error') {
+    <div class="modal-footer border-0 justify-content-center bg-light">
+      <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>
+    </div>
+  }
+</ng-template>
