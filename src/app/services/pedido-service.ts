@@ -51,4 +51,17 @@ export class PedidoService {
     return this.http.get<any>(`${this.baseUrl}/pedido/sucursal/${idSucursal}/paged`, { params });
   }
 
+
+  // ==========================================
+  // NUEVO: BÚSQUEDA COMBINADA (Texto + Sucursal)
+  // ==========================================
+  buscarPaginadoYFiltrado(termino: string, idSucursal: number, page: number, size: number): Observable<any> {
+    const params = new HttpParams()
+      .set('termino', termino)
+      .set('idSucursal', idSucursal.toString())
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<any>(`${this.baseUrl}/pedido/busqueda-paginada`, { params });
+  }
+
 }

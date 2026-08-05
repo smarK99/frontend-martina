@@ -14,7 +14,18 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2 class="h4 mb-0">Pedidos</h2>
 
-      <div class="d-flex gap-2 align-items-center">
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        
+        <!-- BUSCADOR POR TEXTO (ID o Importe) -->
+        <div class="input-group input-group-sm" style="width: 250px;">
+          <input type="search" class="form-control" placeholder="Buscar N° Pedido o Importe..." 
+                 #searchInput (input)="onFilterChange(searchInput.value)" />
+          <button class="btn btn-outline-secondary" (click)="onFilterChange(searchInput.value)">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+
+        <!-- SELECTOR DE SUCURSAL -->
         @if ((role$ | async) !== 'ROLE_CLIENTE') {
           <select class="form-select form-select-sm" (change)="onSucursalFilterChange($event)" style="min-width: 220px;">
             <option value="">Todas las sucursales</option>
@@ -26,7 +37,7 @@
       </div>
 
       @if (role$ | async; as role) {
-        <div class="text-muted small fw-bold">
+        <div class="text-muted small fw-bold d-none d-lg-block">
           @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
             <i class="bi bi-shield-check text-success"></i> Viendo todos los pedidos (Admin)
           } @else if (role === 'ROLE_CLIENTE') {

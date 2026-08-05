@@ -1,7 +1,8 @@
 import { Component, inject, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { Observable, combineLatest, BehaviorSubject, switchMap, tap, catchError, of } from 'rxjs';
+// AÑADIDOS debounceTime y distinctUntilChanged para el buscador
+import { Observable, combineLatest, BehaviorSubject, switchMap, tap, catchError, of, debounceTime, distinctUntilChanged } from 'rxjs';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
@@ -62,7 +63,9 @@ export class Pedidos implements OnInit {
   pageSize = 15;
   totalElements = 0;
   totalPages = 0;
+  
   filtroSucursal$ = new BehaviorSubject<number | ''>(''); 
+  filterSubject = new BehaviorSubject<string>(''); // NUEVO: Controla el texto del buscador
   
   // AHORA USAMOS VARIABLES NORMALES (Sin Async Pipe)
   isLoadingTabla = false;
@@ -114,29 +117,26 @@ export class Pedidos implements OnInit {
     this.configurarPaginacionReactiva();
   }
 
-  // LÓGICA REACTIVA DE PAGINACIÓN (Refactorizada y Blindada)
+  // LÓGICA REACTIVA DE PAGINACIÓN Y BÚSQUEDA COMBINADA
   configurarPaginacionReactiva() {
     combineLatest([
       this.filtroSucursal$,
+      this.filterSubject.pipe(debounceTime(400), distinctUntilChanged()), // Espera a que el usuario deje de tipear
       this.refresh$,
       this.role$
     ]).pipe(
       tap(() => this.isLoadingTabla = true),
-      switchMap(([sucursalId, _, role]) => {
-        let idAFiltrar: number | '' = sucursalId;
+      switchMap(([sucursalId, termino, _, role]) => {
+        
+        // Si no hay sucursal seleccionada, mandamos 0 para buscar en todas
+        let idAFiltrar: number = Number(sucursalId) || 0;
         
         if (role === 'ROLE_CLIENTE') {
           idAFiltrar = this.CURRENT_CLIENT_ID;
         }
 
-        let peticion$: Observable<any>;
-        if (idAFiltrar !== '') {
-          peticion$ = this.pedidoService.getBySucursalPaged(Number(idAFiltrar), this.currentPage, this.pageSize);
-        } else {
-          peticion$ = this.pedidoService.getAllPaged(this.currentPage, this.pageSize);
-        }
-
-        return peticion$.pipe(
+        // Llamamos directamente a la nueva Super Consulta del servicio
+        return this.pedidoService.buscarPaginadoYFiltrado(termino, idAFiltrar, this.currentPage, this.pageSize).pipe(
           catchError(error => {
             console.error('🚨 Error crítico al traer pedidos del backend:', error);
             // Si hay error devolvemos una página vacía para apagar el spinner
@@ -145,7 +145,6 @@ export class Pedidos implements OnInit {
         );
       })
     ).subscribe(response => {
-      // Nos suscribimos manualmente. Esto soluciona los errores de ciclo de vida en HTML.
       this.totalElements = response.totalElements;
       this.totalPages = response.totalPages;
       this.pedidos = response.content; 
@@ -191,6 +190,12 @@ export class Pedidos implements OnInit {
       this.currentPage = nuevaPagina;
       this.refresh$.next(); 
     }
+  }
+
+  // NUEVO METODO PARA EL TEXTO DEL BUSCADOR
+  onFilterChange(value: string) {
+    this.currentPage = 0; 
+    this.filterSubject.next(value.trim()); 
   }
 
   onSucursalFilterChange(event: any) {
