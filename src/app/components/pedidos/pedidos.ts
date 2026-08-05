@@ -1,7 +1,7 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { Observable, combineLatest, map, BehaviorSubject, switchMap } from 'rxjs';
+import { Observable, combineLatest, BehaviorSubject, switchMap, tap, catchError, of } from 'rxjs';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
@@ -13,8 +13,6 @@ import { ActionBar } from '../action-bar/action-bar';
 import { ProductoService } from '../../services/producto-service';
 import { SucursalService } from '../../services/sucursal-service';
 
-import { ViewChild, TemplateRef } from '@angular/core';
-
 // --- INTERFACES LOCALES ---
 interface itemCarrito {
   productoId: number;
@@ -23,7 +21,6 @@ interface itemCarrito {
   precioUnitario: number;
 }
 
-// Interfaz adaptada para la vista del Modal de "Ver Detalle"
 export interface PedidoSeleccionado {
   id: number;
   fecha: string;
@@ -55,16 +52,21 @@ export class Pedidos implements OnInit {
   // 2. VARIABLES DE ESTADO Y OBSERVABLES
   // ==========================================
 
-  // -- RxJS / Tablas --
-  private filterSubject = new BehaviorSubject<string>('');
-  filter$ = this.filterSubject.asObservable();
   role$ = this.auth.role$;
   isLoggedIn$ = this.auth.isLoggedIn$;
-  pedidos$!: Observable<any[]>;
-  visiblePedidos$!: Observable<any[]>;
   private CURRENT_CLIENT_ID = 1;
-  //Señal para forzar recarga de datos después de crear o cancelar un pedido
   private refresh$ = new BehaviorSubject<void>(undefined);
+
+  // --- VARIABLES DE PAGINACIÓN Y FILTRO ---
+  currentPage = 0;
+  pageSize = 15;
+  totalElements = 0;
+  totalPages = 0;
+  filtroSucursal$ = new BehaviorSubject<number | ''>(''); 
+  
+  // AHORA USAMOS VARIABLES NORMALES (Sin Async Pipe)
+  isLoadingTabla = false;
+  pedidos: any[] = [];
 
   // -- Modal Alta Pedido --
   pedidoForm: FormGroup;
@@ -77,7 +79,7 @@ export class Pedidos implements OnInit {
   // -- Modal Ver Detalle --
   selectedPedido: any | null = null;
   isLoadingDetalle: boolean = false;
-
+  pedidoACancelar: number | null = null;
 
   // ==========================================
   // ALERTA GENÉRICA (ÉXITO / ERROR)
@@ -90,10 +92,8 @@ export class Pedidos implements OnInit {
     this.mensajeAlerta = mensaje;
     this.tipoAlerta = tipo;
     
-    // Abrimos el modal con backdrop 'static' para que el usuario no lo cierre clickeando afuera si es un error
     this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
 
-    // Si es éxito, lo cerramos automáticamente a los 2 segundos
     if (tipo === 'exito') {
       setTimeout(() => {
         this.modalService.dismissAll();
@@ -101,64 +101,59 @@ export class Pedidos implements OnInit {
     }
   }
 
-  
-  // ==========================================
-  // 3. CONSTRUCTOR Y CICLO DE VIDA
-  // ==========================================
-
   constructor() {
-    // Inicializar Formulario de Alta
     this.pedidoForm = this.fb.group({
       idSucursal: ['', Validators.required],
       descripcion: ['']
     });
-
-    // Observable principal de pedidos, se recarga cada vez que "refresh$" emite señal
-    this.pedidos$ = this.refresh$.pipe(
-      switchMap(() => this.pedidoService.getAll())
-    );
-
-    // Lógica reactiva de filtrado y roles (Blindado)
-    this.visiblePedidos$ = combineLatest([this.pedidos$, this.role$, this.filter$]).pipe(
-      map(([pedidos, role, filter]) => {
-        const q = (filter || '').trim().toLowerCase();
-        let list: any[] = [];
-
-        if (!role) return [];
-        else if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_EMPLEADO') {
-          // El personal interno ve absolutamente todos los pedidos
-          list = pedidos.slice();
-        } 
-        else if (role === 'ROLE_CLIENTE') {
-          // El cliente SOLO ve los que coinciden con su ID 
-          // (Nota: Seguis usando CURRENT_CLIENT_ID = 1 por ahora, está perfecto para probar)
-          list = pedidos.filter(p => p.sucursal.id === this.CURRENT_CLIENT_ID);
-        } 
-        else {
-          // Si entra un Repartidor o alguien de Stock por error a esta URL, no ve nada
-          return [];
-        }
-
-        if (q) {
-          list = list.filter(p =>
-            (p.sucursal.nombreSucursal || '').toLowerCase().includes(q) ||
-            p.id.toString().includes(q) ||
-            (p.estadoPedido.nombreEstadoPedido || '').toLowerCase().includes(q)
-          );
-        }
-
-        return list.sort((a, b) => +new Date(b.fechaHoraAltaPedido) - +new Date(a.fechaHoraAltaPedido));
-      })
-    );
   }
 
   ngOnInit() {
     this.cargarDatosBackend();
     this.listenerCambioSucursal();
+    this.configurarPaginacionReactiva();
+  }
+
+  // LÓGICA REACTIVA DE PAGINACIÓN (Refactorizada y Blindada)
+  configurarPaginacionReactiva() {
+    combineLatest([
+      this.filtroSucursal$,
+      this.refresh$,
+      this.role$
+    ]).pipe(
+      tap(() => this.isLoadingTabla = true),
+      switchMap(([sucursalId, _, role]) => {
+        let idAFiltrar: number | '' = sucursalId;
+        
+        if (role === 'ROLE_CLIENTE') {
+          idAFiltrar = this.CURRENT_CLIENT_ID;
+        }
+
+        let peticion$: Observable<any>;
+        if (idAFiltrar !== '') {
+          peticion$ = this.pedidoService.getBySucursalPaged(Number(idAFiltrar), this.currentPage, this.pageSize);
+        } else {
+          peticion$ = this.pedidoService.getAllPaged(this.currentPage, this.pageSize);
+        }
+
+        return peticion$.pipe(
+          catchError(error => {
+            console.error('🚨 Error crítico al traer pedidos del backend:', error);
+            // Si hay error devolvemos una página vacía para apagar el spinner
+            return of({ content: [], totalElements: 0, totalPages: 0 });
+          })
+        );
+      })
+    ).subscribe(response => {
+      // Nos suscribimos manualmente. Esto soluciona los errores de ciclo de vida en HTML.
+      this.totalElements = response.totalElements;
+      this.totalPages = response.totalPages;
+      this.pedidos = response.content; 
+      this.isLoadingTabla = false; 
+    });
   }
 
   cargarDatosBackend() {
-    //1. Cargar sucursales disponibles para el Modal de Nuevo Pedido
     this.sucursalService.getAll().subscribe({
       next: (data) => this.sucursales = data,
       error: (err) => console.error('Error al cargar sucursales', err)
@@ -167,8 +162,6 @@ export class Pedidos implements OnInit {
 
   listenerCambioSucursal() {
     this.pedidoForm.get('idSucursal')?.valueChanges.subscribe(sucursalId => {
-
-      // 1. Si se reseteó el formulario o no hay selección, limpiamos todo.
       if (!sucursalId) {
         this.limpiarSeleccionProductos();
         return;
@@ -193,10 +186,17 @@ export class Pedidos implements OnInit {
     });
   }
 
+  cambiarPagina(nuevaPagina: number) {
+    if (nuevaPagina >= 0 && nuevaPagina < this.totalPages) {
+      this.currentPage = nuevaPagina;
+      this.refresh$.next(); 
+    }
+  }
 
-  // ==========================================
-  // 4. LÓGICA: MODAL ALTA DE PEDIDO
-  // ==========================================
+  onSucursalFilterChange(event: any) {
+    this.currentPage = 0; 
+    this.filtroSucursal$.next(event.target.value);
+  }
 
   openModal(modalTemplate: any) {
     const modalRef = this.modalService.open(modalTemplate, { size: 'lg', centered: true });
@@ -267,7 +267,7 @@ export class Pedidos implements OnInit {
       this.pedidoService.create(payload).subscribe({
         next: (respuesta) => {
           this.closeModal();
-          this.refresh$.next();
+          this.refresh$.next(); 
           setTimeout(() => {
           this.mostrarAlerta('¡Pedido registrado con éxito!', 'exito');
           }, 300);
@@ -283,11 +283,6 @@ export class Pedidos implements OnInit {
       }
     }
   }
-
-
-  // ==========================================
-  // 5. LÓGICA: MODAL VER DETALLE Y CANCELAR
-  // ==========================================
 
   abrirModalDetalle(pedidoId: number, modalTemplate: any) {
     this.modalService.open(modalTemplate, { size: 'lg', centered: true });
@@ -311,44 +306,26 @@ export class Pedidos implements OnInit {
     this.selectedPedido = null;
   }
 
-  // --- NUEVO MÉTODO: CANCELAR PEDIDO ---
-  // Variable para guardar temporalmente el ID del pedido a cancelar
-  pedidoACancelar: number | null = null;
-
-  // 1. Abre el modal bonito de Bootstrap
   abrirModalCancelacion(id: number, modalTemplate: any) {
     this.pedidoACancelar = id;
     this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
   }
 
-  // 2. Ejecuta la cancelación si el usuario hace clic en "Sí, cancelar"
   confirmarCancelacion() {
     if (this.pedidoACancelar) {
       this.pedidoService.cancelarPedido(this.pedidoACancelar).subscribe({
         next: (respuesta) => {
           this.modalService.dismissAll(); 
           this.pedidoACancelar = null;    
-          this.refresh$.next();           
-          
-          // ACÁ USAMOS LA ALERTA NUEVA DE ÉXITO
+          this.refresh$.next();          
           this.mostrarAlerta('El pedido ha sido cancelado exitosamente.', 'exito');
         },
         error: (err) => {
           console.error('Error al cancelar el pedido:', err);
-          
-          // ACÁ USAMOS LA ALERTA NUEVA DE ERROR
           this.mostrarAlerta('Ocurrió un error al intentar cancelar el pedido.', 'error');
         }
       });
     }
-  }
-
-  // ==========================================
-  // 6. FUNCIONES HELPER (UTILIDADES)
-  // ==========================================
-
-  onFilterChange(value: string) {
-    this.filterSubject.next(value ?? '');
   }
 
   toShortDate(fechaIso: string) {
@@ -361,5 +338,4 @@ export class Pedidos implements OnInit {
     this.tempProductoId = null;
     this.itemsDelPedido = [];
   }
-
 }

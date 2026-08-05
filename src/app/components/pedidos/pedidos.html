@@ -1,9 +1,5 @@
 <app-action-bar title="Gestión Pedidos">
-
-  <button class="btn btn-outline-secondary d-flex align-items-center gap-2">
-    <i class="bi bi-list-columns"></i> Historial
-  </button>
-
+  <!-- El botón Historial fue retirado temporalmente de esta vista -->
   @if (role$ | async; as role) {
     @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_EMPLEADO') {
       <button class="btn btn-danger d-flex align-items-center gap-2 ms-2" (click)="openModal(nuevoPedidoModal)">
@@ -11,7 +7,6 @@
       </button>
     }
   }
-
 </app-action-bar>
 
 <section class="py-4">
@@ -20,9 +15,14 @@
       <h2 class="h4 mb-0">Pedidos</h2>
 
       <div class="d-flex gap-2 align-items-center">
-        <input type="search" class="form-control form-control-sm" placeholder="Buscar por cliente, id o estado..."
-          (input)="onFilterChange($any($event.target).value)" style="min-width: 220px;" />
-        <button class="btn btn-sm btn-outline-secondary" (click)="onFilterChange('')">Buscar</button>
+        @if ((role$ | async) !== 'ROLE_CLIENTE') {
+          <select class="form-select form-select-sm" (change)="onSucursalFilterChange($event)" style="min-width: 220px;">
+            <option value="">Todas las sucursales</option>
+            @for (sucursal of sucursales; track sucursal.id) {
+              <option [value]="sucursal.id">{{ sucursal.nombreSucursal }}</option>
+            }
+          </select>
+        }
       </div>
 
       @if (role$ | async; as role) {
@@ -41,71 +41,87 @@
     </div>
 
     <!-- Tabla de pedidos -->
-    @if (visiblePedidos$ | async; as pedidos) {
-    @if (pedidos.length === 0) {
-    <div class="alert alert-info">No hay pedidos para mostrar.</div>
+    @if (isLoadingTabla) {
+      <div class="text-center py-5">
+        <div class="spinner-border text-danger" role="status"></div>
+        <p class="text-muted mt-2">Cargando pedidos...</p>
+      </div>
     } @else {
-    <div class="table-responsive">
-      <table class="table table-striped align-middle">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Fecha</th>
-            <th>Cliente</th>
-            <th>Total</th>
-            <th>Estado</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (p of pedidos; track p.id) {
-          <tr>
-            <td>{{ p.id }}</td>
-            <td>{{ toShortDate(p.fechaHoraAltaPedido) }}</td>
-            <td>{{ p.sucursal.nombreSucursal }}</td>
-            <td>{{ p.importeTotalPedido| currency:'ARS' }}</td>
-            <td>
-              <span class="badge" [ngClass]="{
-                      'bg-success': p.estadoPedido.nombreEstadoPedido ==='ENTREGADO',
-                      'bg-danger': p.estadoPedido.nombreEstadoPedido ==='CANCELADO',
-                      'bg-warning text-dark': p.estadoPedido.nombreEstadoPedido==='EN PREPARACIÓN' || p.estadoPedido.nombreEstadoPedido==='ENVIADO',
-                      'bg-secondary': p.estadoPedido.nombreEstadoPedido!=='ENTREGADO' && p.estadoPedido.nombreEstadoPedido!=='CANCELADO' && p.estadoPedido.nombreEstadoPedido!=='EN PREPARACIÓN'
-                    }">{{ p.estadoPedido.nombreEstadoPedido }}</span>
-            </td>
-            <td class="text-end">
-              <button class="btn btn-sm btn-outline-primary me-1"
-                (click)="abrirModalDetalle(p.id, detallePedidoModal)">Ver</button>
-              
-              <!-- Botón de Cancelar: Solo para clientes y si el pedido es válido para cancelación -->
-              @if ((role$ | async) === 'ROLE_CLIENTE' && p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO' && p.estadoPedido.nombreEstadoPedido !== 'CANCELADO') {
-                <button class="btn btn-sm btn-outline-danger me-1" (click)="abrirModalCancelacion(p.id, confirmarCancelacionModal)">
-                Cancelar
-                </button>
+      @if (pedidos.length === 0) {
+        <div class="alert alert-info border-0 shadow-sm"><i class="bi bi-info-circle me-2"></i> No hay pedidos para mostrar en esta vista.</div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of pedidos; track p.id) {
+              <tr>
+                <td>{{ p.id }}</td>
+                <td>{{ p.fechaHoraAltaPedido | date:'short' }}</td>
+                <td>{{ p.sucursal.nombreSucursal }}</td>
+                <td class="fw-bold">{{ p.importeTotalPedido | currency:'ARS' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="{
+                          'bg-success': p.estadoPedido.nombreEstadoPedido ==='ENTREGADO',
+                          'bg-danger': p.estadoPedido.nombreEstadoPedido ==='CANCELADO',
+                          'bg-warning text-dark': p.estadoPedido.nombreEstadoPedido==='EN PREPARACIÓN' || p.estadoPedido.nombreEstadoPedido==='ENVIADO',
+                          'bg-secondary': p.estadoPedido.nombreEstadoPedido!=='ENTREGADO' && p.estadoPedido.nombreEstadoPedido!=='CANCELADO' && p.estadoPedido.nombreEstadoPedido!=='EN PREPARACIÓN'
+                        }">{{ p.estadoPedido.nombreEstadoPedido }}</span>
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary me-1"
+                    (click)="abrirModalDetalle(p.id, detallePedidoModal)">Ver</button>
+                  
+                  @if ((role$ | async) === 'ROLE_CLIENTE' && p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO' && p.estadoPedido.nombreEstadoPedido !== 'CANCELADO') {
+                    <button class="btn btn-sm btn-outline-danger me-1" (click)="abrirModalCancelacion(p.id, confirmarCancelacionModal)">
+                    Cancelar
+                    </button>
+                  }
+                </td>
+              </tr>
               }
-            </td>
-          </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    }
-    } @else {
-    <div> Cargando pedidos… </div>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- CONTROLES DE PAGINACIÓN -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <span class="text-muted small">Mostrando página {{ currentPage + 1 }} de {{ totalPages }} (Total: {{ totalElements }} pedidos)</span>
+          
+          <nav aria-label="Navegación de pedidos">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" [class.disabled]="currentPage === 0">
+                <button class="page-link" (click)="cambiarPagina(currentPage - 1)">Anterior</button>
+              </li>
+              
+              <li class="page-item" [class.disabled]="currentPage >= totalPages - 1 || totalPages === 0">
+                <button class="page-link" (click)="cambiarPagina(currentPage + 1)">Siguiente</button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      }
     }
   </div>
 </section>
 
 <!-- Modal Nuevo Pedido -->
 <ng-template #nuevoPedidoModal let-modal>
-
   <div class="modal-header modal-header-red text-white">
     <h5 class="modal-title fw-bold">Registrar Nuevo Pedido</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
   </div>
-
   <div class="modal-body">
     <div class="container-fluid px-0">
-
       <form [formGroup]="pedidoForm">
         <div class="row g-3">
           <div class="col-md-12">
@@ -120,7 +136,6 @@
             <div class="text-danger small mt-1">La sucursal es obligatoria.</div>
             }
           </div>
-
           <div class="col-md-12">
             <label class="form-label fw-bold">Descripción / Notas</label>
             <textarea class="form-control" formControlName="descripcion" rows="2"
@@ -130,7 +145,6 @@
       </form>
 
       <hr class="my-4 text-secondary">
-
       <h6 class="fw-bold mb-3">Detalle del Pedido (Productos)</h6>
 
       @if (productosDisponibles.length > 0) {
@@ -144,12 +158,10 @@
             }
           </select>
         </div>
-
         <div class="col-md-3">
           <label class="form-label small mb-1">Cant.</label>
           <input type="number" class="form-control form-control-sm" [(ngModel)]="tempCantidad" min="1">
         </div>
-
         <div class="col-md-3">
           <button class="btn btn-sm btn-danger w-100" (click)="agregarItem()"
             [disabled]="!tempProductoId || tempCantidad < 1">
@@ -162,6 +174,7 @@
           <i class="bi bi-info-circle me-1"></i> Por favor, seleccione una sucursal 
         </div>
       }
+
       @if (itemsDelPedido.length > 0) {
       <div class="table-responsive border rounded">
         <table class="table table-sm table-hover mb-0">
@@ -203,25 +216,20 @@
         No has agregado productos al pedido aún.
       </div>
       }
-
     </div>
   </div>
-
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
     <button type="button" class="btn bg-brand" (click)="guardarPedido()">Confirmar Pedido</button>
   </div>
-
 </ng-template>
 
 <!--Modal Ver detalle Pedido-->
 <ng-template #detallePedidoModal let-modal>
-
   <div class="modal-header bg-danger text-white">
     <h5 class="modal-title fw-bold">Detalle del Pedido #{{ selectedPedido?.id }}</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="cerrarModalDetalle()"></button>
   </div>
-
   <div class="modal-body">
     @if (isLoadingDetalle) {
     <div class="text-center py-5 text-muted">
@@ -230,7 +238,6 @@
     </div>
     }
     @else if (selectedPedido) {
-
     <div class="row mb-4 bg-light py-3 rounded border mx-1">
       <div class="col-md-6 mb-2 mb-md-0">
         <strong>Cliente:</strong> <span class="ms-2">{{ selectedPedido.sucursal.nombreSucursal }}</span><br>
@@ -240,14 +247,11 @@
         <strong>Estado:</strong>
         <span class="badge bg-secondary ms-2 fs-6">{{ selectedPedido.estadoPedido.nombreEstadoPedido }}</span><br>
         <div class="mt-2 fs-5">
-          <strong>Total:</strong> <span class="text-danger fw-bold ms-2">{{ selectedPedido.importeTotalPedido | currency
-            }}</span>
+          <strong>Total:</strong> <span class="text-danger fw-bold ms-2">{{ selectedPedido.importeTotalPedido | currency }}</span>
         </div>
       </div>
     </div>
-
     <h6 class="fw-bold mb-3 ps-1 border-bottom pb-2">Ítems del Pedido</h6>
-
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
@@ -263,11 +267,7 @@
           <tr>
             <td class="text-center fw-bold">{{ item.cantidadDetallePedido }}</td>
             <td>{{ item.producto.nombreProducto }}</td>
-
-            <td class="text-end">
-              {{ (item.subtotalDetallePedido / item.cantidadDetallePedido) | currency }}
-            </td>
-
+            <td class="text-end">{{ (item.subtotalDetallePedido / item.cantidadDetallePedido) | currency }}</td>
             <td class="text-end fw-bold pe-3">{{ item.subtotalDetallePedido | currency }}</td>
           </tr>
           }
@@ -282,7 +282,6 @@
         </tfoot>
       </table>
     </div>
-
     }
     @else {
     <div class="text-center py-5 text-danger">
@@ -290,11 +289,9 @@
     </div>
     }
   </div>
-
   <div class="modal-footer bg-light">
     <button type="button" class="btn btn-danger" (click)="cerrarModalDetalle()">Cerrar</button>
   </div>
-
 </ng-template>
 
 <!-- Modal Confirmar Cancelación -->
@@ -303,13 +300,11 @@
     <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Cancelar Pedido</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
   </div>
-  
   <div class="modal-body text-center py-4">
     <i class="bi bi-x-circle text-danger mb-3 d-block" style="font-size: 3rem;"></i>
     <p class="fs-5 mb-1">¿Estás seguro de que deseas cancelar el pedido <strong>#{{ pedidoACancelar }}</strong>?</p>
     <p class="text-muted small">Esta acción no se puede deshacer.</p>
   </div>
-  
   <div class="modal-footer bg-light border-0 justify-content-center">
     <button type="button" class="btn btn-outline-secondary px-4" (click)="modal.dismiss()">No, volver</button>
     <button type="button" class="btn btn-danger px-4" (click)="confirmarCancelacion()">Sí, cancelar</button>
@@ -319,7 +314,6 @@
 <!-- Modal de Alerta Genérica (Éxito / Error) -->
 <ng-template #alertaModal let-modal>
   <div class="modal-body text-center py-4">
-    
     @if (tipoAlerta === 'exito') {
       <i class="bi bi-check-circle-fill text-success d-block mb-3 animate__animated animate__bounceIn" style="font-size: 3.5rem;"></i>
       <h5 class="fw-bold text-success">¡Éxito!</h5>
@@ -327,11 +321,8 @@
       <i class="bi bi-x-circle-fill text-danger d-block mb-3 animate__animated animate__shakeX" style="font-size: 3.5rem;"></i>
       <h5 class="fw-bold text-danger">¡Error!</h5>
     }
-    
     <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
   </div>
-  
-  <!-- Solo mostramos el botón de cerrar si es un error, el de éxito se cierra solo -->
   @if (tipoAlerta === 'error') {
     <div class="modal-footer border-0 justify-content-center bg-light">
       <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>
