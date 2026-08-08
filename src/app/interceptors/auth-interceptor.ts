@@ -2,11 +2,37 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
-import { AuthService } from '../services/auth-service'; // Ajustá la ruta si varía
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap'; 
+
+// Ajustá estas rutas según las carpetas de tu proyecto
+import { AuthService } from '../services/auth-service'; 
+import { SessionExpiredComponent } from '../components/auth/session-expired.component'; 
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const authService = inject(AuthService);
+  const modalService = inject(NgbModal); // Inyectamos el servicio de modales
+
+  // Función auxiliar para no repetir la lógica visual
+  const manejarSesionExpirada = () => {
+    authService.logout(); // Limpia localStorage y estados
+    
+    // Cerramos cualquier otro modal que el usuario tuviera abierto (ej: viendo detalle de un pedido)
+    modalService.dismissAll();
+
+    // Abrimos el modal de sesión expirada obligando al usuario a interactuar con él (static)
+    const modalRef = modalService.open(SessionExpiredComponent, {
+      backdrop: 'static',
+      keyboard: false,
+      centered: true
+    });
+
+    // Sin importar cómo se cierre el modal, lo pateamos al login
+    modalRef.result.then(
+      () => router.navigate(['/login']),
+      () => router.navigate(['/login'])
+    );
+  };
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -31,23 +57,21 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
               return next(newAuthReq);
             }),
             catchError((refreshErr) => {
-              // El Refresh Token también expiró (o es inválido): Cerramos sesión
-              authService.logout();
-              alert('Tu sesión ha expirado por completo. Por favor, volvé a iniciar sesión.');
-              router.navigate(['/login']);
+              // El Refresh Token también expiró (o es inválido): Mostramos modal y cerramos sesión
+              manejarSesionExpirada();
               return throwError(() => refreshErr);
             })
           );
         } else if (!isAuthRequest) {
-          // No había Refresh Token: sesión expirada directa
-          authService.logout();
-          router.navigate(['/login']);
+          // No había Refresh Token o el pedido de refresh falló: sesión expirada directa
+          manejarSesionExpirada();
         }
       }
 
       // Si es un 403 (Sin permisos suficientes para esa función)
       if (error.status === 403) {
-        alert('No tenés permisos para realizar esta acción.');
+        alert('No tenés permisos para realizar esta acción.'); 
+        // Nota: A futuro también podrías cambiar este alert por un Toast o un Modal chiquito
       }
 
       return throwError(() => error);

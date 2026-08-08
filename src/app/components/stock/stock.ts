@@ -1,8 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService } from '../../services/auth-service';
-import { Observable, combineLatest, map, BehaviorSubject, switchMap } from 'rxjs'
+import { Observable, combineLatest, map, BehaviorSubject, switchMap } from 'rxjs';
 import { ConteoStockService } from '../../services/conteo-stock-service';
 import { ConteoStock } from '../../model/conteo-stock.model';
 import { ActionBar } from '../action-bar/action-bar';
@@ -31,7 +31,7 @@ interface ItemInsumoStock {
   templateUrl: './stock.html',
   styleUrl: './stock.css'
 })
-export class Stock {
+export class Stock implements OnInit {
   private fb = inject(FormBuilder);
   private stockService = inject(ConteoStockService);
   private modalService = inject(NgbModal);
@@ -72,6 +72,13 @@ export class Stock {
   //Variable modo edicion/creacion (De la rama de Santi)
   isEditMode: boolean = false;
   idConteoEditando: number | null = null;
+
+  // ==========================================
+  // ALERTA GENÉRICA (ÉXITO / ERROR)
+  // ==========================================
+  @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' = 'exito';
 
   constructor() {
     // Conectamos la tabla al gatillo de refresco (Tu lógica reactiva)
@@ -116,17 +123,44 @@ export class Stock {
     this.insumoService.getAll().subscribe(data => this.insumosDisponibles = data);
   }
 
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    
+    // Abrimos el modal con backdrop 'static' para que el usuario no lo cierre clickeando afuera si es un error
+    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+
+    // Si es éxito, lo cerramos automáticamente a los 2 segundos
+    if (tipo === 'exito') {
+      setTimeout(() => {
+        this.modalService.dismissAll();
+      }, 2000);
+    }
+  }
+
   // --- ELIMINAR CONTEO ---
-  eliminarConteo(id: any) {
-    const confirmar = confirm('¿Estás seguro de que deseas eliminar este conteo de stock?');
-    if (confirmar) {
-      this.stockService.delete(id).subscribe({
+  // Variable para guardar el ID del conteo a eliminar
+  conteoAEliminar: number | null = null;
+
+  // 1. Abre el modal de confirmación
+  abrirModalEliminacion(id: number, modalTemplate: any) {
+    this.conteoAEliminar = id;
+    this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+  }
+
+  // 2. Ejecuta la eliminación si hace clic en "Sí, eliminar"
+  confirmarEliminacion() {
+    if (this.conteoAEliminar) {
+      this.stockService.delete(this.conteoAEliminar).subscribe({
         next: () => {
-          console.log('Conteo eliminado exitosamente');
-          this.refresh$.next(); // Recargar la lista de conteos
+          this.modalService.dismissAll(); // Cierra el modal
+          this.conteoAEliminar = null;    // Limpia la variable
+          this.refresh$.next();           // Recarga la tabla
+          this.mostrarAlerta('Conteo eliminado correctamente.', 'exito');
         },
         error: (err) => {
           console.error('Error al eliminar conteo', err);
+          this.mostrarAlerta('Error al intentar eliminar el conteo.', 'error');
         }
       });
     }
@@ -208,7 +242,7 @@ export class Stock {
   // --- GUARDADO ---
   guardarConteo() {
     if (this.productosContados.length === 0 && this.insumosContados.length === 0) {
-      alert("Debes contar al menos un producto o insumo.");
+      this.mostrarAlerta("Debes contar al menos un producto o insumo.", 'error');
       return;
     }
 
@@ -234,9 +268,12 @@ export class Stock {
         next: () => {
           this.closeModal();
           this.refresh$.next();
-          setTimeout(() => alert("Conteo modificado correctamente."), 300);
+          setTimeout(() => this.mostrarAlerta("Conteo modificado correctamente.", 'exito'), 300);
         },
-        error: (err) => console.error("Error al modificar conteo", err)
+        error: (err) => {
+          console.error("Error al modificar conteo", err);
+          this.mostrarAlerta("Error al modificar conteo", 'error');
+        }
       });
     } else {
       // Si es nuevo, llamamos a CREATE
@@ -244,9 +281,12 @@ export class Stock {
         next: () => {
           this.closeModal();
           this.refresh$.next();
-          setTimeout(() => alert("Conteo registrado correctamente."), 300);
+          setTimeout(() => this.mostrarAlerta("Conteo registrado correctamente.", 'exito'), 300);
         },
-        error: (err) => console.error("Error al guardar conteo", err)
+        error: (err) => {
+          console.error("Error al guardar conteo", err);
+          this.mostrarAlerta("Error al guardar conteo", 'error');
+        }
       });
     }
   }
@@ -288,62 +328,62 @@ export class Stock {
   }
 
   /**
- * Convierte un precio (que puede venir como string) a un número.
- * Es una función frágil, idealmente el backend debería enviar números.
- */
-private parsePrice(precioRaw: any): number {
-  let precio = 0;
-  
-  if (typeof precioRaw === 'string') {
-    // Elimina símbolos no numéricos (ej: $ , espacios) y convierte coma a punto
-    const cleaned = precioRaw.replace(/[^0-9\-,.\s]/g, '').trim().replace(',', '.');
-    precio = parseFloat(cleaned) || 0;
-  } else {
-    precio = Number(precioRaw) || 0;
-  }
-  
-  // Asegura que no sea NaN (Not a Number)
-  return isNaN(precio) ? 0 : precio;
-}
-
-totalValue(c: ConteoStock): number {
-  // Si no hay conteo, el total es 0
-  if (!c) {
-    return 0;
-  }
-
-  // 1. Calcular total de Insumos
-  const listaInsumos = c.csinsumosList || [];
-  const totalInsumos = listaInsumos.reduce((acc, item) => {
+  * Convierte un precio (que puede venir como string) a un número.
+  * Es una función frágil, idealmente el backend debería enviar números.
+  */
+  private parsePrice(precioRaw: any): number {
+    let precio = 0;
     
-    const cantidad = Number(item?.cantidadStockInsumo ?? 0);
-    const precio = this.parsePrice(item?.insumo?.precioCompraInsumo);
-    
-    return acc + (cantidad * precio);
-  }, 0);
-
-  // 2. Sumar ambos totales
-  const total = totalInsumos;
-
-  // 4. Redondear a 2 decimales
-  return Math.round(total * 100) / 100;
-}
-
-tieneAcceso(rolUsuario: string | null): boolean {
-    if (!rolUsuario) return false;
-    const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', ''); // Lo pasa a mayúsculas y le saca el ROLE_ si lo tiene
-    return rolLimpio === 'ADMIN' || rolLimpio === 'EMPLEADO';
-}
-
-obtenerIdUsuarioLogueado(): number {
-    // Verificamos si este código se está ejecutando en el navegador real
-    if (isPlatformBrowser(this.platformId)) {
-      const userId = localStorage.getItem('idUsuario');
-      return userId ? Number(userId) : 2;
+    if (typeof precioRaw === 'string') {
+      // Elimina símbolos no numéricos (ej: $ , espacios) y convierte coma a punto
+      const cleaned = precioRaw.replace(/[^0-9\-,.\s]/g, '').trim().replace(',', '.');
+      precio = parseFloat(cleaned) || 0;
+    } else {
+      precio = Number(precioRaw) || 0;
     }
     
-    // Si se está ejecutando en el servidor (al hacer F5), devolvemos un ID por defecto
-    return 1;
-}
+    // Asegura que no sea NaN (Not a Number)
+    return isNaN(precio) ? 0 : precio;
+  }
+
+  totalValue(c: ConteoStock): number {
+    // Si no hay conteo, el total es 0
+    if (!c) {
+      return 0;
+    }
+
+    // 1. Calcular total de Insumos
+    const listaInsumos = c.csinsumosList || [];
+    const totalInsumos = listaInsumos.reduce((acc, item) => {
+      
+      const cantidad = Number(item?.cantidadStockInsumo ?? 0);
+      const precio = this.parsePrice(item?.insumo?.precioCompraInsumo);
+      
+      return acc + (cantidad * precio);
+    }, 0);
+
+    // 2. Sumar ambos totales
+    const total = totalInsumos;
+
+    // 4. Redondear a 2 decimales
+    return Math.round(total * 100) / 100;
+  }
+
+  tieneAcceso(rolUsuario: string | null): boolean {
+      if (!rolUsuario) return false;
+      const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', ''); // Lo pasa a mayúsculas y le saca el ROLE_ si lo tiene
+      return rolLimpio === 'ADMIN' || rolLimpio === 'EMPLEADO';
+  }
+
+  obtenerIdUsuarioLogueado(): number {
+      // Verificamos si este código se está ejecutando en el navegador real
+      if (isPlatformBrowser(this.platformId)) {
+        const userId = localStorage.getItem('idUsuario');
+        return userId ? Number(userId) : 2;
+      }
+      
+      // Si se está ejecutando en el servidor (al hacer F5), devolvemos un ID por defecto
+      return 1;
+  }
 
 }

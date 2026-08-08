@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; 
@@ -65,6 +65,13 @@ export class Repartos implements OnInit {
   cargandoPedidos = false;
 
   // ==========================================
+  // ALERTA GENÉRICA (ÉXITO / ERROR)
+  // ==========================================
+  @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' = 'exito';
+
+  // ==========================================
   // 3. CONSTRUCTOR Y CICLO DE VIDA
   // ==========================================
   constructor() {
@@ -119,6 +126,19 @@ export class Repartos implements OnInit {
     this.driverInfo = { id: this.CURRENT_REPARTIDOR_ID, nombre: 'Santiago Marquez (Simulado)' };
   }
 
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    
+    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+
+    if (tipo === 'exito') {
+      setTimeout(() => {
+        this.modalService.dismissAll();
+      }, 2000);
+    }
+  }
+
   // ==========================================
   // 4. LÓGICA DE MODALES (DETALLE Y ALTA)
   // ==========================================
@@ -165,18 +185,18 @@ export class Repartos implements OnInit {
           this.refresh$.next(); // Actualiza tu tabla al instante
           
           setTimeout(() => {
-            alert('¡Reparto creado con éxito!');
+            this.mostrarAlerta('¡Reparto creado con éxito!', 'exito');
           }, 300);
         },
         error: (err) => {
           console.error('Error al intentar crear el reparto:', err);
-          alert('Hubo un error al guardar el reparto. Revisa la consola.');
+          this.mostrarAlerta('Hubo un error al guardar el reparto. Revisa la consola.', 'error');
         }
       });
 
     } else {
       this.repartoForm.markAllAsTouched();
-      alert('Por favor, completa el nombre del reparto.');
+      this.mostrarAlerta('Por favor, completa el nombre del reparto.', 'error');
     }
   }
 
@@ -217,7 +237,7 @@ export class Repartos implements OnInit {
   // 3. Envía los datos al backend
   guardarAsignacion() {
     if (this.pedidosSeleccionados.size === 0 || !this.repartoActivoId) {
-      alert('Debes seleccionar al menos un pedido.');
+      this.mostrarAlerta('Debes seleccionar al menos un pedido.', 'error');
       return;
     }
 
@@ -233,12 +253,12 @@ export class Repartos implements OnInit {
 
         // Alert con pequeño retraso para no bloquear la animación de cierre
           setTimeout(() => {
-            alert('¡Pedidos asignados con éxito!');
+            this.mostrarAlerta('¡Pedidos asignados con éxito!', 'exito');
           }, 300);
       },
       error: (err) => {
         console.error('Error al asignar', err);
-        alert('Hubo un error al asignar los pedidos.');
+        this.mostrarAlerta('Hubo un error al asignar los pedidos.', 'error');
       }
     });
   }

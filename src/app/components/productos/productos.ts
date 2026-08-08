@@ -5,10 +5,11 @@ import { Categorias } from './categorias/categorias';
 import { Insumos } from './insumos/insumos';
 import { ActionBar } from "../action-bar/action-bar";
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { AuthService } from '../../services/auth-service'; // <-- Importamos el motor de seguridad
-import { AsignarPrecios } from "./asignar-precios/asignar-precios"; // <-- Importamos la vista de los chicos
+import { AuthService } from '../../services/auth-service'; 
+import { AsignarPrecios } from "./asignar-precios/asignar-precios"; 
 
-type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
+// Unificamos las sucursales y sus precios en una sola vista
+type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'SUCURSALES';
 
 @Component({
   selector: 'app-productos',
@@ -19,13 +20,15 @@ type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
 })
 export class Productos {
 
-  // Inyectamos el servicio para saber quién está mirando la pantalla
   private authService = inject(AuthService);
   role$ = this.authService.role$;
 
   @ViewChild('productosGestion') productosGestion!: ProductoGestion;
   @ViewChild('categoriasGestion') categoriasGestion!: Categorias;
   @ViewChild('insumosGestion') insumosGestion!: Insumos;
+  
+  // Reutilizamos tu componente AsignarPrecios, pero ahora orquesta todo el ABM de sucursales
+  @ViewChild('sucursalesGestion') sucursalesGestion!: AsignarPrecios; 
   
   vistaActual: VistaActiva = 'PRODUCTOS';
 
@@ -34,7 +37,7 @@ export class Productos {
       case 'PRODUCTOS': return 'Gestión de Productos';
       case 'CATEGORIAS': return 'Gestión de Categorías';
       case 'INSUMOS': return 'Gestión de Insumos';
-      case 'PRECIOS_SUCURSAL': return 'Precios por Sucursal';
+      case 'SUCURSALES': return 'Sucursales y Precios'; // Título unificado
       default: return 'Gestión';
     }
   }
@@ -44,7 +47,7 @@ export class Productos {
       case 'PRODUCTOS': return 'Nuevo Producto';
       case 'CATEGORIAS': return 'Nueva Categoría';
       case 'INSUMOS': return 'Nuevo Insumo';
-      case 'PRECIOS_SUCURSAL': return 'Ajustar Precios';
+      case 'SUCURSALES': return 'Nueva Sucursal'; // Acción principal unificada
       default: return 'Nuevo';
     }
   }
@@ -64,10 +67,13 @@ export class Productos {
       case 'INSUMOS':
         this.insumosGestion?.abrirModalAltaInsumo();
         break;
+      case 'SUCURSALES':
+        // Llamará al modal de alta dentro de asignar-precios
+        this.sucursalesGestion?.abrirModalAlta(); 
+        break;
     }
   }
 
-  // Agregá este método en tu componente
   getImagenProducto(nombre: string): string {
     const nombreLimpio = nombre.toLowerCase();
 
@@ -75,15 +81,12 @@ export class Productos {
       return '/assets/jcrudo.jpg';
     } 
     if (nombreLimpio.includes('salame')) {
-      // Reemplazá por el nombre exacto si es distinto
       return '/assets/salame-verdura.jpg'; 
     } 
     if (nombreLimpio.includes('cocido') || nombreLimpio.includes('jyq')) {
       return '/assets/jcocido.jpg';
     }
 
-    // Si no encuentra ninguna de esas palabras, pone el logo por defecto
     return '/assets/martina-logo.png';
   }
-
 }
