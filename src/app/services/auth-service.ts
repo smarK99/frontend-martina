@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, tap, map } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { JwtDto } from '../model/jwt-dto'; 
 import { LoginUsuario } from '../model/login-usuario';
 
@@ -21,7 +22,8 @@ export class AuthService {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private httpClient: HttpClient 
+    private httpClient: HttpClient, 
+    private router: Router
   ) {
     this.roleSubject = new BehaviorSubject<Role>(this.getInitialRole());
     this.role$ = this.roleSubject.asObservable();
@@ -96,6 +98,7 @@ export class AuthService {
       localStorage.removeItem('role'); 
     }
     this.roleSubject.next(null);
+    this.router.navigate(['/productos']);
   }
 
   public getToken(): string | null {
