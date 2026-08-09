@@ -16,18 +16,46 @@
 
     <section class="py-4">
       <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h2 class="h4 mb-0">Repartos</h2>
-          <div class="d-flex gap-2 align-items-center">
-            <!-- Mantenemos el placeholder mejorado de la rama main -->
-            <input type="search" class="form-control form-control-sm" placeholder="Buscar por repartidor, cliente o id..." (input)="onFilterChange($any($event.target).value)" style="min-width: 260px;" />
-            <button class="btn btn-sm btn-outline-secondary" (click)="onFilterChange('')">Buscar</button>
-          </div>
-        </div>
+        <!-- CABECERA CON FILTROS (FECHA, ESTADO Y TEXTO) -->
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
+            <h2 class="h4 mb-0">Repartos</h2>
+            
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <!-- Selector de Estado (mapeado exacto con tus IDs de BDD) -->
+              <select class="form-select form-select-sm" style="width: 150px;" (change)="onEstadoFilterChange($any($event.target).value)">
+                <option value="0">Todos los estados</option>
+                <option value="1">En Curso</option>
+                <option value="2">Finalizado</option>
+                <option value="3">Pendiente</option>
+              </select>
 
-        @if (visibleRepartos$ | async; as repartos) {
+              <!-- Selector de Fecha -->
+              <div class="input-group input-group-sm" style="width: auto;">
+                <span class="input-group-text bg-white text-secondary"><i class="bi bi-calendar3"></i></span>
+                <input type="date" class="form-control" title="Filtrar por fecha" 
+                      (change)="onDateFilterChange($any($event.target).value)">
+              </div>
+
+              <!-- Buscador de Texto -->
+              <div class="input-group input-group-sm" style="min-width: 250px;">
+                <span class="input-group-text bg-white text-secondary"><i class="bi bi-search"></i></span>
+                <input type="search" class="form-control border-start-0 ps-0" placeholder="Buscar por ID o repartidor..." 
+                      #searchInput (input)="onFilterChange(searchInput.value)" />
+              </div>
+            </div>
+          </div>
+
+        @if (isLoadingTabla) {
+          <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>
+            Cargando repartos…
+          </div>
+        } @else {
           @if (repartos.length === 0) {
-            <div class="alert alert-info">No hay repartos para mostrar.</div>
+            <div class="alert alert-info text-center py-4">
+              <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+              No se encontraron repartos para los filtros seleccionados.
+            </div>
           } @else {
             <div class="table-responsive">
               <table class="table table-striped align-middle">
@@ -52,7 +80,6 @@
                       <td>{{ cantidadPedidosActivos(r) }}</td>
                       <td>{{ totalReparto(r) | currency:'ARS' }}</td>
                       <td class="text-end">
-                        <!-- Botón de asignar (+) solo para Admin/Dueño si no está finalizado -->
                         @if (r.estadoReparto.nombreEstadoReparto !== 'FINALIZADO' && (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO')) {  
                           <button class="btn btn-sm btn-outline-success me-2" (click)="abrirModalAsignacion(asignarPedidosModal, r.id)">
                             <i class="bi bi-truck"></i> +
@@ -65,19 +92,28 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- CONTROLES DE PAGINACIÓN -->
+            <div class="d-flex justify-content-between align-items-center mt-3 border-top pt-3">
+              <span class="text-muted small">Mostrando página {{ currentPage + 1 }} de {{ totalPages }} (Total: {{ totalElements }} repartos)</span>
+              
+              <nav aria-label="Navegación de repartos">
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item" [class.disabled]="currentPage === 0">
+                    <button class="page-link" (click)="cambiarPagina(currentPage - 1)">Anterior</button>
+                  </li>
+                  <li class="page-item" [class.disabled]="currentPage >= totalPages - 1 || totalPages === 0">
+                    <button class="page-link" (click)="cambiarPagina(currentPage + 1)">Siguiente</button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
           }
-        } @else {
-          <!-- Mantenemos el spinner de carga de la rama main -->
-          <div class="text-center py-5 text-muted">
-            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-            Cargando repartos…
-          </div>
         }
       </div>
     </section>
 
   } @else {
-    <!-- Pantalla de bloqueo de tu rama de seguridad -->
     <div class="container py-5 mt-5 text-center animate__animated animate__fadeIn">
       <i class="bi bi-shield-lock text-danger" style="font-size: 5rem;"></i>
       <h2 class="mt-3 fw-bold text-secondary">Acceso Restringido</h2>
@@ -102,7 +138,7 @@
       <p class="mb-1"><strong>Inicio:</strong> {{ rep.fechaHoraInicioReparto | date:'full' }}</p>
       <p class="mb-2"><strong>Estado:</strong> {{ rep.estadoReparto.nombreEstadoReparto }}</p>
 
-      <h6 class="mt-3">Pedidos en este reparto</h6>
+      <h6 class="mt-3 border-bottom pb-2">Pedidos en este reparto</h6>
       <div class="table-responsive">
         <table class="table table-sm align-middle">
           <thead>
@@ -111,7 +147,7 @@
               <th>Fecha</th>
               <th>Cliente</th>
               <th class="text-end">Monto</th>
-              <th>Estado</th>
+              <th class="text-center">Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -120,9 +156,9 @@
                 <td>{{ p.id }}</td>
                 <td>{{ p.fechaHoraEntregaPedido | date:'short' }}</td>
                 <td>{{ p.sucursal.nombreSucursal }}</td>
-                <td class="text-end">{{ p.importeTotalPedido | currency:'ARS' }}</td>
+                <td class="text-end fw-semibold">{{ p.importeTotalPedido | currency:'ARS' }}</td>
                 <td>
-                  <div class="d-flex align-items-center gap-2">
+                  <div class="d-flex align-items-center justify-content-center gap-2">
                     <span class="badge bg-light text-dark border">{{ p.estadoPedido.nombreEstadoPedido }}</span>
                     
                     @if (role$ | async; as rolModal) {
@@ -130,7 +166,6 @@
                            p.estadoPedido.nombreEstadoPedido !== 'CANCELADO' && 
                            p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO') {
                         
-                        <!-- ACÁ CAMBIAMOS EL EVENTO CLICK -->
                         <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Cancelar Pedido" (click)="abrirConfirmacionCancelacion(confirmarCancelacionModal, p.id)">
                           <i class="bi bi-x-circle"></i>
                         </button>
@@ -145,7 +180,7 @@
           <tfoot>
             <tr class="table-active">
               <td colspan="3" class="text-end fw-bold">TOTAL REPARTO</td>
-              <td class="text-end fw-bold">{{ totalReparto(rep) | currency:'ARS' }}</td>
+              <td class="text-end fw-bold text-success">{{ totalReparto(rep) | currency:'ARS' }}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -156,8 +191,8 @@
     }
   </div>
 
-  <div class="modal-footer">
-    <button class="btn bg-brand" (click)="modal.close()">Cerrar</button>
+  <div class="modal-footer bg-light">
+    <button class="btn bg-brand text-white" (click)="modal.close()">Cerrar</button>
   </div>
 </ng-template>
 
@@ -165,37 +200,39 @@
 <ng-template #altaRepartoModal let-modal>
   
   <div class="modal-header modal-header-red text-white">
-    <h5 class="modal-title">Alta de Nuevo Reparto</h5>
+    <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Alta de Nuevo Reparto</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
   </div>
 
-  <div class="modal-body">
+  <div class="modal-body p-4">
     <form [formGroup]="repartoForm">
       <div class="row g-3">
         
         <div class="col-md-6">
-          <label class="form-label">Nombre del Reparto</label>
+          <label class="form-label fw-bold small">Nombre del Reparto *</label>
           <input type="text" class="form-control" formControlName="nombre" placeholder="Ej: Ruta Norte Maipú">
         </div>
 
         <div class="col-md-6">
-          <label class="form-label fw-bold">Repartidor</label>
-          <input type="text" class="form-control" [value]="driverInfo ? driverInfo.id + ' - ' + driverInfo.nombre : 'Sin sesión'" disabled />
+          <label class="form-label fw-bold small">Repartidor asignado</label>
+          <input type="text" class="form-control bg-light" [value]="driverInfo ? driverInfo.id + ' - ' + driverInfo.nombre : 'Sin sesión'" disabled />
         </div>
 
-        <div class="col-12 mt-4">
-          <label class="form-label">Descripción Adicional</label>
+        <div class="col-12 mt-3">
+          <label class="form-label fw-bold small">Descripción Adicional (Opcional)</label>
           <textarea class="form-control" formControlName="descripcion" rows="3" placeholder="Ej: Entregas antes de las 12 pls"></textarea>
-          <div class="form-text mt-2">Describe cualquier detalle importante sobre esta ruta o recorrido.</div>
+          <div class="form-text mt-1 text-muted">Describe cualquier detalle importante sobre esta ruta o recorrido.</div>
         </div>
         
       </div>
     </form>
   </div>
 
-  <div class="modal-footer">
-    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
-    <button type="button" class="btn bg-brand text-white" (click)="guardarReparto()">Crear Reparto</button>
+  <div class="modal-footer bg-light">
+    <button type="button" class="btn btn-outline-secondary" (click)="modal.dismiss()">Cancelar</button>
+    <button type="button" class="btn bg-brand text-white" (click)="guardarReparto()">
+      <i class="bi bi-check-circle me-1"></i>Crear Reparto
+    </button>
   </div>
 
 </ng-template>
@@ -217,8 +254,9 @@
             <div class="mt-2 text-muted">Buscando pedidos disponibles...</div>
         </div>
     } @else if (pedidosDisponibles.length === 0) {
-        <div class="alert alert-info m-3 text-center">
-            <i class="bi bi-info-circle me-2"></i> No hay pedidos pendientes de asignación en este momento.
+        <div class="alert alert-info m-4 text-center border-0 shadow-sm">
+            <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+            No hay pedidos pendientes de asignación en este momento.
         </div>
     } @else {
         <div class="table-responsive">
@@ -240,10 +278,10 @@
                                    [checked]="pedidosSeleccionados.has(p.id)"
                                    (click)="$event.stopPropagation(); toggleSeleccionPedido(p.id)"> 
                         </td>
-                        <td class="fw-bold">#{{ p.id }}</td>
-                        <td>{{ p.sucursal?.nombreSucursal }}</td>
+                        <td class="fw-bold text-muted">#{{ p.id }}</td>
+                        <td class="fw-semibold">{{ p.sucursal?.nombreSucursal }}</td>
                         <td class="text-muted small">{{ p.sucursal?.direccionSucursal || 'Retira en local' }}</td>
-                        <td class="text-end pe-4">{{ p.importeTotalPedido | currency:'ARS' }}</td>
+                        <td class="text-end pe-4 fw-bold text-success">{{ p.importeTotalPedido | currency:'ARS' }}</td>
                     </tr>
                     }
                 </tbody>
@@ -254,7 +292,7 @@
 
   <div class="modal-footer justify-content-between bg-light">
     <div>
-        <span class="badge" [ngClass]="pedidosSeleccionados.size > 0 ? 'bg-success' : 'bg-secondary'">
+        <span class="badge" [ngClass]="pedidosSeleccionados.size > 0 ? 'bg-success fs-6' : 'bg-secondary'">
             {{ pedidosSeleccionados.size }} seleccionados
         </span>
     </div>
@@ -263,7 +301,7 @@
         <button type="button" class="btn btn-danger" 
                 [disabled]="pedidosSeleccionados.size === 0"
                 (click)="guardarAsignacion()">
-            Guardar Asignación
+            <i class="bi bi-save me-1"></i> Guardar Asignación
         </button>
     </div>
   </div>
@@ -272,7 +310,6 @@
 <!-- Modal de Alerta Genérica (Éxito / Error) -->
 <ng-template #alertaModal let-modal>
   <div class="modal-body text-center py-4">
-    
     @if (tipoAlerta === 'exito') {
       <i class="bi bi-check-circle-fill text-success d-block mb-3 animate__animated animate__bounceIn" style="font-size: 3.5rem;"></i>
       <h5 class="fw-bold text-success">¡Éxito!</h5>
@@ -280,11 +317,8 @@
       <i class="bi bi-x-circle-fill text-danger d-block mb-3 animate__animated animate__shakeX" style="font-size: 3.5rem;"></i>
       <h5 class="fw-bold text-danger">¡Error!</h5>
     }
-    
     <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
   </div>
-  
-  <!-- Solo mostramos el botón de cerrar si es un error, el de éxito se cierra solo -->
   @if (tipoAlerta === 'error') {
     <div class="modal-footer border-0 justify-content-center bg-light">
       <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>

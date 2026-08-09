@@ -1,8 +1,8 @@
-import { Component, inject, TemplateRef, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { InsumosService } from '../../../services/insumos-service';
 import { Insumo } from '../../../model/producto.model';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CommonModule } from '@angular/common';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
@@ -11,12 +11,13 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
   templateUrl: './insumos.html',
   styleUrl: './insumos.css'
 })
-export class Insumos {
-private fb = inject(FormBuilder);
-private modalService = inject(NgbModal);
-private insumoService = inject(InsumosService);
+export class Insumos implements OnInit {
+  private fb = inject(FormBuilder);
+  private modalService = inject(NgbModal);
+  private insumoService = inject(InsumosService);
 
   insumos: Insumo[] = [];
+  insumosFiltrados: Insumo[] = []; // <-- NUEVO: Arreglo espejo
   cargando = false;
   
   insumoForm: FormGroup;
@@ -39,10 +40,10 @@ private insumoService = inject(InsumosService);
   cargarInsumos() {
     this.cargando = true;
     
-    // Simulación (Reemplazar con this.insumoService.getAll()...)
     this.insumoService.getAll().subscribe({
       next: (data) => {
         this.insumos = data;
+        this.insumosFiltrados = data; // <-- NUEVO: Inicializamos el arreglo espejo
         this.cargando = false;
       },
       error: (err) => {
@@ -52,14 +53,28 @@ private insumoService = inject(InsumosService);
     });
   }
 
-  // --- ACCIÓN: CREAR (Llamado desde el botón del componente Padre) ---
+  // --- NUEVO: MÉTODO DE FILTRADO ---
+  filtrarInsumos(termino: string) {
+    if (!termino) {
+      this.insumosFiltrados = this.insumos;
+      return;
+    }
+    
+    const q = termino.toLowerCase().trim();
+    this.insumosFiltrados = this.insumos.filter(insumo => 
+      // Blindaje de ID al igual que en categorías
+      (insumo.id?.toString() || '').includes(q) || 
+      insumo.nombreInsumo.toLowerCase().includes(q) ||
+      (insumo.descripcionInsumo && insumo.descripcionInsumo.toLowerCase().includes(q))
+    );
+  }
+
   abrirModalAltaInsumo() {
     this.insumoEnEdicion = null; 
     this.insumoForm.reset();     
     this.abrirModal();
   }
 
-  // --- ACCIÓN: EDITAR (Llamado desde la tabla) ---
   editarInsumo(insumo: Insumo) {
     this.insumoEnEdicion = insumo; 
     
@@ -79,7 +94,6 @@ private insumoService = inject(InsumosService);
     );
   }
 
-  // --- ACCIÓN: GUARDAR ---
   guardarInsumo() {
     if (this.insumoForm.invalid) {
       this.insumoForm.markAllAsTouched();
@@ -89,10 +103,9 @@ private insumoService = inject(InsumosService);
     const formData = this.insumoForm.value;
 
     if (this.insumoEnEdicion) {
-      // MODO EDICIÓN (PUT) - Aplicamos la fusión de objetos para evitar el Error 400
       const payloadActualizado = {
         ...this.insumoEnEdicion, 
-        ...formData                 
+        ...formData                
       };
 
       console.log('Actualizando insumo:', payloadActualizado);
@@ -100,7 +113,7 @@ private insumoService = inject(InsumosService);
         next: () => {
           console.log('Insumo actualizada exitosamente');
           this.modalService.dismissAll();
-          this.cargarInsumos(); // Recargar la lista de insumos
+          this.cargarInsumos(); 
         },
         error: (err) => {
           console.error('Error al actualizar insumo', err);
@@ -108,14 +121,14 @@ private insumoService = inject(InsumosService);
       });
       
       this.modalService.dismissAll();
+      // Opcional: reemplazar estos alert() por un modal o toast en el futuro ;)
       alert('Insumo actualizado');
 
     } else {
-      // MODO CREACIÓN (POST)
       this.insumoService.create(formData).subscribe({
         next: () => {
           console.log('Insumo creado exitosamente');
-          this.cargarInsumos(); // Recargar la lista de insumos
+          this.cargarInsumos(); 
         },
         error: (err) => {
           console.error('Error al crear insumo', err);
@@ -133,7 +146,7 @@ private insumoService = inject(InsumosService);
       this.insumoService.delete(idInsumo).subscribe({
         next: () => {
           console.log('Insumo eliminado exitosamente');
-          this.cargarInsumos(); // Recargar la lista de insumos
+          this.cargarInsumos(); 
         },
         error: (err: any) => {
           console.error('Error al eliminar insumo', err);

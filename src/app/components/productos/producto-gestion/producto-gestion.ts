@@ -1,13 +1,14 @@
-import { Component, inject, TemplateRef, ViewChild } from '@angular/core';
+import { Component, inject, TemplateRef, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ProductoService } from '../../../services/producto-service';
-import { BehaviorSubject, Observable, switchMap } from 'rxjs';
-import { Producto } from '../../../model/producto.model';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { BehaviorSubject, switchMap } from 'rxjs';
+
+import { ProductoService } from '../../../services/producto-service';
 import { CategoriaService } from '../../../services/categoria-service';
 import { InsumosService } from '../../../services/insumos-service';
 import { AuthService } from '../../../services/auth-service'; 
+import { Producto } from '../../../model/producto.model';
 
 interface ItemInsumoReceta {
   insumoId: number;
@@ -21,30 +22,35 @@ interface ItemInsumoReceta {
   templateUrl: './producto-gestion.html',
   styleUrl: './producto-gestion.css'
 })
-export class ProductoGestion {
+export class ProductoGestion implements OnInit {
   
   // --- INYECCIONES DE SERVICIOS ---
   private categoriaService = inject(CategoriaService);
   private insumoService = inject(InsumosService);
   private authService = inject(AuthService); 
+  private productoService = inject(ProductoService);
+  private fb = inject(FormBuilder);
+  private modalService = inject(NgbModal);
 
   role$ = this.authService.role$;
 
   @ViewChild('altaProductoModal') modalAltaProducto!: TemplateRef<any>;
 
-  productos: Producto[] = [];
+  // --- VARIABLES DE DATOS Y FILTROS ---
+  productosOriginales: Producto[] = [];
+  productosFiltrados: Producto[] = [];
   insumosDisponibles: any[] = [];
   categoriasDisponibles: any[] = [];
   insumosDelProducto: ItemInsumoReceta[] = [];
 
+  filtroCategoria: string | number = 'TODAS';
+  filtroTexto: string = '';
+
   tempInsumoId: number | null = null;
   tempCantidadInsumo: number = 1;
 
-  isModalOpen = false;
   productoForm: FormGroup;
-
   private refresh$ = new BehaviorSubject<void>(undefined);
-  productos$!: Observable<any[]>;
 
   // --- VARIABLES ALERTA Y BAJA ---
   productoABajar: number | null = null;
@@ -52,7 +58,7 @@ export class ProductoGestion {
   mensajeAlerta: string = '';
   tipoAlerta: 'exito' | 'error' = 'exito';
 
-  constructor(private productoService: ProductoService, private fb: FormBuilder, private modalService: NgbModal) {
+  constructor() {
     this.productoForm = this.fb.group({
       nombre: ['', Validators.required],
       descripcion: [''],
@@ -62,14 +68,56 @@ export class ProductoGestion {
 
   ngOnInit() {
     this.loadData();
-    this.productos$ = this.refresh$.pipe(
+    
+    // Suscripción reactiva para cargar y filtrar productos localmente
+    this.refresh$.pipe(
       switchMap(() => this.productoService.getAll())
-    );
+    ).subscribe({
+      next: (data) => {
+        this.productosOriginales = data;
+        this.aplicarFiltrosCombinados();
+      },
+      error: (err) => console.error('Error al cargar productos:', err)
+    });
   }
 
   loadData(): void {
-    this.categoriaService.getAll().subscribe(data => { this.categoriasDisponibles = data })
+    this.categoriaService.getAll().subscribe(data => { this.categoriasDisponibles = data });
     this.insumoService.getAll().subscribe(data => { this.insumosDisponibles = data });
+  }
+
+  // ==========================================
+  // LÓGICA DE FILTRADO COMBINADO
+  // ==========================================
+  aplicarFiltrosCombinados() {
+    let temp = this.productosOriginales;
+
+    // 1. Filtro por Categoría
+    if (this.filtroCategoria !== 'TODAS') {
+      temp = temp.filter(p => p.categoria?.id == this.filtroCategoria);
+    }
+
+    // 2. Filtro por Texto
+    if (this.filtroTexto) {
+      const q = this.filtroTexto.toLowerCase().trim();
+      temp = temp.filter(p =>
+        (p.id?.toString() || '').includes(q) ||
+        (p.nombreProducto || '').toLowerCase().includes(q) ||
+        (p.descripcionProducto || '').toLowerCase().includes(q)
+      );
+    }
+
+    this.productosFiltrados = temp;
+  }
+
+  onFiltrarCategoria(event: any) {
+    this.filtroCategoria = event.target.value;
+    this.aplicarFiltrosCombinados();
+  }
+
+  onBuscarTexto(termino: string) {
+    this.filtroTexto = termino;
+    this.aplicarFiltrosCombinados();
   }
 
   // ==========================================
@@ -88,14 +136,16 @@ export class ProductoGestion {
     }
   }
 
-  // --- MODAL LÓGICA RECETA ---
+  // ==========================================
+  // LÓGICA DE RECETA (INSUMOS)
+  // ==========================================
   agregarInsumo() {
     if (!this.tempInsumoId || this.tempCantidadInsumo <= 0) return;
 
     const insumoSeleccionado = this.insumosDisponibles.find(i => i.codInsumo == this.tempInsumoId || i.id == this.tempInsumoId);
 
     if (insumoSeleccionado) {
-      const existente = this.insumosDelProducto.find(item => item.insumoId === insumoSeleccionado.codInsumo);
+      const existente = this.insumosDelProducto.find(item => item.insumoId === (insumoSeleccionado.codInsumo || insumoSeleccionado.id));
 
       if (existente) {
         existente.cantidad += this.tempCantidadInsumo;
@@ -116,7 +166,9 @@ export class ProductoGestion {
     this.insumosDelProducto.splice(index, 1);
   }
 
-  // --- ALTA PRODUCTO ---
+  // ==========================================
+  // ALTA DE PRODUCTO
+  // ==========================================
   abrirModalAltaProducto() {
     const modalRef = this.modalService.open(this.modalAltaProducto, { size: 'lg', centered: true });
 
@@ -189,7 +241,7 @@ export class ProductoGestion {
         next: () => {
           this.modalService.dismissAll();
           this.productoABajar = null;
-          this.refresh$.next(); // Recarga los productos visualmente
+          this.refresh$.next(); 
           setTimeout(() => this.mostrarAlerta('Producto eliminado exitosamente.', 'exito'), 300);
         },
         error: (err) => {
@@ -200,7 +252,9 @@ export class ProductoGestion {
     }
   }
 
-  // --- HELPER PARA IMÁGENES DINÁMICAS ---
+  // ==========================================
+  // HELPER PARA IMÁGENES DINÁMICAS
+  // ==========================================
   getImagenProducto(nombreProducto: string): string {
     if (!nombreProducto) return '/assets/martina-logo.png';
     

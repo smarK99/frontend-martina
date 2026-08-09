@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { environment } from '../../environment/environment';
@@ -28,5 +28,18 @@ export class ConteoStockService {
 
   update(id: any, stockDTO: any): Observable<any> {
     return this.http.put(`${this.baseUrl}/update/${id}`, stockDTO);
+  }
+
+  // ==========================================
+  // NUEVO MÉTODO: Paginación y Búsqueda combinada
+  // ==========================================
+  buscarPaginadoYFiltrado(termino: string, fecha: string, page: number, size: number): Observable<any> {
+    const params = new HttpParams()
+      .set('termino', termino)
+      .set('fecha', fecha)
+      .set('page', page.toString())
+      .set('size', size.toString());
+      
+    return this.http.get<any>(`${this.baseUrl}/busqueda-paginada`, { params });
   }
 }

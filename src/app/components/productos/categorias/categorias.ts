@@ -11,24 +11,22 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
   templateUrl: './categorias.html',
   styleUrl: './categorias.css'
 })
-
-export class Categorias {
+export class Categorias implements OnInit {
   
   private categoriaService = inject(CategoriaService);
   private fb = inject(FormBuilder);
   private modalService = inject(NgbModal);
   
-  categorias: Categoria[] = [];// Lista de categorías (provenientes del backend) para mostrar en la tabla
+  categorias: Categoria[] = []; 
+  categoriasFiltradas: Categoria[] = []; // <-- NUEVO: Arreglo espejo para la tabla
   cargando = false;
 
-  categoriaForm: FormGroup; //Modal alta/edición de categoría
+  categoriaForm: FormGroup; 
   categoriaEnEdicion: Categoria | null = null;
 
-  // Atrapamos el modal del HTML
   @ViewChild('categoriaModal') modalCategoria!: TemplateRef<any>;
 
   constructor() {
-    // Inicializamos el formulario
     this.categoriaForm = this.fb.group({
       nombreCategoria: ['', [Validators.required, Validators.maxLength(50)]],
       descripcionCategoria: ['', Validators.maxLength(200)]
@@ -45,6 +43,7 @@ export class Categorias {
     this.categoriaService.getAll().subscribe({
       next: (data) => {
         this.categorias = data;
+        this.categoriasFiltradas = data; // <-- NUEVO: Inicializamos el espejo con todos los datos
         this.cargando = false;
       },
       error: (err) => {
@@ -52,20 +51,33 @@ export class Categorias {
         this.cargando = false;
       }
     });
-  
   }
 
-  // --- MÉTODO PÚBLICO: LO LLAMA EL PADRE AL TOCAR EL BOTÓN ROJO ---
+  // --- NUEVO: MÉTODO PARA FILTRAR EN TIEMPO REAL ---
+  filtrarCategorias(termino: string) {
+    if (!termino) {
+      this.categoriasFiltradas = this.categorias;
+      return;
+    }
+    
+    const q = termino.toLowerCase().trim();
+    this.categoriasFiltradas = this.categorias.filter(cat => 
+      // Usamos (cat.id?.toString() || '') para evitar el error si es undefined
+      (cat.id?.toString() || '').includes(q) || 
+      cat.nombreCategoria.toLowerCase().includes(q) ||
+      (cat.descripcionCategoria && cat.descripcionCategoria.toLowerCase().includes(q))
+    );
+  }
+
   abrirModalAltaCategoria() {
-    this.categoriaEnEdicion = null; // Aseguramos que no haya categoría en edición
-    this.categoriaForm.reset(); // Limpiamos el formulario
+    this.categoriaEnEdicion = null; 
+    this.categoriaForm.reset(); 
     this.abrirModal();
   }
 
-  // --- MÉTODOS DE LA TABLA ---
   editarCategoria(categoria: Categoria) {
-    this.categoriaEnEdicion = categoria; // Guardamos la categoría que se va a editar
-    this.categoriaForm.patchValue({ // Cargamos los datos de la categoría en el formulario
+    this.categoriaEnEdicion = categoria; 
+    this.categoriaForm.patchValue({ 
       nombreCategoria: categoria.nombreCategoria,
       descripcionCategoria: categoria.descripcionCategoria
     });
@@ -86,7 +98,7 @@ export class Categorias {
       this.categoriaService.delete(idCategoria).subscribe({
         next: () => {
           console.log('Categoría eliminada exitosamente');
-          this.cargarCategorias(); // Recargar la lista de categorías
+          this.cargarCategorias(); 
         },
         error: (err) => {
           console.error('Error al eliminar categoría', err);
@@ -104,30 +116,25 @@ export class Categorias {
     const formData = this.categoriaForm.value;
 
     if (this.categoriaEnEdicion) {
-      // MODO EDICIÓN (PUT)
-
-      //Fusionamos el objeto original con los datos nuevos del formulario
       const payloadActualizado = {
-        ...this.categoriaEnEdicion, // Trae el id, fechaHora, etc.
-        ...formData                 // Sobrescribe el nombre y descripción nuevos
+        ...this.categoriaEnEdicion, 
+        ...formData                
       };
       this.categoriaService.update(this.categoriaEnEdicion.id, payloadActualizado).subscribe({
         next: () => {
           console.log('Categoría actualizada exitosamente');
           this.modalService.dismissAll();
-          this.cargarCategorias(); // Recargar la lista de categorías
+          this.cargarCategorias(); 
         },
         error: (err) => {
           console.error('Error al actualizar categoría', err);
         }
       });
     } else {
-      // MODO CREACIÓN (POST)
-      console.log('Creando nueva categoría:', formData);
       this.categoriaService.create(formData).subscribe({
         next: () => {
           console.log('Categoría creada exitosamente');
-          this.cargarCategorias(); // Recargar la lista de categorías
+          this.cargarCategorias(); 
         },
         error: (err) => {
           console.error('Error al crear categoría', err);
@@ -135,8 +142,6 @@ export class Categorias {
       });
     }
 
-    this.modalService.dismissAll(); // Cerramos el modal
+    this.modalService.dismissAll(); 
   }
-
-
 }
