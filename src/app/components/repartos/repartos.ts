@@ -130,11 +130,13 @@ export class Repartos implements OnInit {
     this.mensajeAlerta = mensaje;
     this.tipoAlerta = tipo;
     
-    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+    // Guardamos la referencia del modal que acabamos de abrir
+    const modalRef = this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
 
     if (tipo === 'exito') {
       setTimeout(() => {
-        this.modalService.dismissAll();
+        // LA CLAVE: Solo cerramos ESTE modal de alerta, dejando intacto el de detalles
+        modalRef.close(); 
       }, 2000);
     }
   }
@@ -270,12 +272,66 @@ export class Repartos implements OnInit {
     this.filterSubject.next(value ?? '');
   }
 
+  // Helper 1: Cuenta solo los pedidos que NO están cancelados
+  cantidadPedidosActivos(reparto: Reparto | null): number {
+    if (!reparto || !reparto.pedidosList) return 0;
+    
+    return reparto.pedidosList
+      .filter(p => p.estadoPedido?.nombreEstadoPedido !== 'CANCELADO')
+      .length;
+  }
+
+  // Helper 2: Suma el dinero solo de los pedidos que NO están cancelados
   totalReparto(reparto: Reparto | null): number {
-    if (!reparto) return 0;
-    return reparto.pedidosList.reduce((acc, p) => acc + (p.importeTotalPedido ?? 0), 0);
+    if (!reparto || !reparto.pedidosList) return 0;
+    
+    return reparto.pedidosList
+      .filter(p => p.estadoPedido?.nombreEstadoPedido !== 'CANCELADO')
+      .reduce((acc, p) => acc + (p.importeTotalPedido ?? 0), 0);
   }
 
   totalPedido(p: any): number {
     return p.importeTotalPedido ?? 0;
   }
+
+  pedidoACancelarId: number | null = null;
+  modalConfirmacionRef: any;
+
+  abrirConfirmacionCancelacion(modalTemplate: any, idPedido: number) {
+    this.pedidoACancelarId = idPedido;
+    // Abrimos un pequeño modal flotante centrado
+    this.modalConfirmacionRef = this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+  }
+
+  ejecutarCancelacion() {
+    if (!this.pedidoACancelarId) return;
+
+    this.pedidoService.cancelarPedido(this.pedidoACancelarId).subscribe({
+      next: () => {
+        // A. Actualizamos visualmente el estado del pedido SIN cerrar el modal grande
+        if (this.selectedReparto) {
+          const pedido = this.selectedReparto.pedidosList.find(p => p.id === this.pedidoACancelarId);
+          if (pedido) {
+            pedido.estadoPedido.nombreEstadoPedido = 'CANCELADO';
+          }
+        }
+
+        // B. Recargamos la tabla del fondo en silencio
+        this.refresh$.next();
+
+        // C. Cerramos SOLO el modal chiquito de confirmación
+        this.modalConfirmacionRef.close();
+        this.pedidoACancelarId = null;
+
+        // D. Mostramos el check verde flotante
+        this.mostrarAlerta('Pedido cancelado exitosamente.', 'exito');
+      },
+      error: (err) => {
+        console.error('Error al cancelar el pedido:', err);
+        this.mostrarAlerta('No se pudo cancelar el pedido.', 'error');
+        if (this.modalConfirmacionRef) this.modalConfirmacionRef.close();
+      }
+    });
+  }
+
 }

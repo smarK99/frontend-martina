@@ -91,12 +91,13 @@ export class Pedidos implements OnInit {
   mensajeAlerta: string = '';
   tipoAlerta: 'exito' | 'error' = 'exito';
 
+  modalConfirmacionRef: any; // <-- NUEVA VARIABLE
+
   mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
     this.mensajeAlerta = mensaje;
     this.tipoAlerta = tipo;
     
-    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
-
+    const modalRef = this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
     if (tipo === 'exito') {
       setTimeout(() => {
         this.modalService.dismissAll();
@@ -313,20 +314,22 @@ export class Pedidos implements OnInit {
 
   abrirModalCancelacion(id: number, modalTemplate: any) {
     this.pedidoACancelar = id;
-    this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+    // Guardamos la referencia del modal de confirmación
+    this.modalConfirmacionRef = this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
   }
 
   confirmarCancelacion() {
     if (this.pedidoACancelar) {
       this.pedidoService.cancelarPedido(this.pedidoACancelar).subscribe({
         next: (respuesta) => {
-          this.modalService.dismissAll(); 
+          if (this.modalConfirmacionRef) this.modalConfirmacionRef.close(); // <-- FIX: Cerramos solo la confirmación
           this.pedidoACancelar = null;    
           this.refresh$.next();          
           this.mostrarAlerta('El pedido ha sido cancelado exitosamente.', 'exito');
         },
         error: (err) => {
           console.error('Error al cancelar el pedido:', err);
+          if (this.modalConfirmacionRef) this.modalConfirmacionRef.close();
           this.mostrarAlerta('Ocurrió un error al intentar cancelar el pedido.', 'error');
         }
       });

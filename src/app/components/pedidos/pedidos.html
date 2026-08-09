@@ -92,10 +92,17 @@
                   <button class="btn btn-sm btn-outline-primary me-1"
                     (click)="abrirModalDetalle(p.id, detallePedidoModal)">Ver</button>
                   
-                  @if ((role$ | async) === 'ROLE_CLIENTE' && p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO' && p.estadoPedido.nombreEstadoPedido !== 'CANCELADO') {
-                    <button class="btn btn-sm btn-outline-danger me-1" (click)="abrirModalCancelacion(p.id, confirmarCancelacionModal)">
-                    Cancelar
-                    </button>
+                  <!-- FIX: Botón Cancelar habilitado para Cliente, Admin y Dueño -->
+                  @if (role$ | async; as userRole) {
+                    @if ((userRole === 'ROLE_CLIENTE' || userRole === 'ROLE_ADMIN' || userRole === 'ROLE_DUENIO') && 
+                         p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO' && 
+                         p.estadoPedido.nombreEstadoPedido !== 'CANCELADO') {
+                      
+                      <button class="btn btn-sm btn-outline-danger me-1" (click)="abrirModalCancelacion(p.id, confirmarCancelacionModal)" title="Cancelar Pedido">
+                        Cancelar
+                      </button>
+                      
+                    }
                   }
                 </td>
               </tr>
