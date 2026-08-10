@@ -10,58 +10,93 @@
     <section class="py-4">
       <div class="container">
         
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <!-- CABECERA: Título y Buscador en línea -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
           <h2 class="h4 mb-0">Directorio de Usuarios</h2>
+          
+          <!-- BUSCADOR POR TEXTO -->
+          <div class="input-group input-group-sm" style="max-width: 350px;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-search"></i></span>
+            <input type="search" class="form-control border-start-0 ps-0" placeholder="Buscar por nombre, usuario o email..."
+                   #searchInput (input)="onFilterChange(searchInput.value)" />
+          </div>
         </div> 
         
-        <div class="table-responsive bg-white shadow-sm rounded border border-light-subtle">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th class="ps-3">ID</th>
-                <th>Nombre Completo</th>
-                <th>Usuario</th>
-                <th>Email</th>
-                <th>Estado</th>
-                <th class="text-end pe-3">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-@for (u of usuarios$ | async; track $index) {
-  <tr>
-    <td class="ps-3 fw-bold text-muted">{{ u.id }}</td>
-    <td>{{ u.nombreCompletoUsuario }}</td>
-    <td>{{ u.username }}</td>
-    <td>{{ u.email }}</td>
-    <td>
-      @if (u.fechaHoraBajaUsuario) { 
-        <span class="badge bg-secondary">Inactivo</span> 
-      } @else {
-        <span class="badge bg-success">Activo</span>
-      }
-    </td>
-    <td class="text-end pe-3">
-      <div class="btn-group gap-2">
-        <button class="btn btn-sm btn-outline-primary border-0" title="Gestionar Roles" 
-          (click)="abrirModalRoles(rolesModal, u)">
-          <i class="bi bi-shield-lock fs-5"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-secondary border-0" title="Editar" 
-          (click)="abrirModalEdicion(usuarioModal, u)">
-          <i class="bi bi-pencil-square fs-5"></i>
-        </button>
-        <!-- BOTÓN ACTUALIZADO PARA ABRIR EL NUEVO MODAL DE CONFIRMACIÓN -->
-        <button class="btn btn-sm btn-outline-danger border-0" title="Dar de Baja" 
-          (click)="abrirModalBaja(u.id, confirmarBajaModal)">
-          <i class="bi bi-person-x-fill fs-5"></i>
-        </button>
-      </div>
-    </td>
-  </tr>
-}
-</tbody>
-          </table>
-        </div>
+        <!-- TABLA Y ESTADOS DE CARGA -->
+        @if (isLoadingTabla) {
+          <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <p class="text-muted mt-2">Cargando usuarios...</p>
+          </div>
+        } @else {
+          @if (usuarios.length === 0) {
+            <div class="alert alert-info border-0 shadow-sm"><i class="bi bi-info-circle me-2"></i> No se encontraron usuarios con ese término.</div>
+          } @else {
+            <div class="table-responsive bg-white shadow-sm rounded border border-light-subtle">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">ID</th>
+                    <th>Nombre Completo</th>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    <th class="text-end pe-3">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Modificado: ya no usa async pipe porque lo manejamos en el subscribe del TS -->
+                  @for (u of usuarios; track u.id) {
+                    <tr>
+                      <td class="ps-3 fw-bold text-muted">{{ u.id }}</td>
+                      <td>{{ u.nombreCompletoUsuario }}</td>
+                      <td>{{ u.username }}</td>
+                      <td>{{ u.email }}</td>
+                      <td>
+                        @if (u.fechaHoraBajaUsuario) { 
+                          <span class="badge bg-secondary">Inactivo</span> 
+                        } @else {
+                          <span class="badge bg-success">Activo</span>
+                        }
+                      </td>
+                      <td class="text-end pe-3">
+                        <div class="btn-group gap-2">
+                          <button class="btn btn-sm btn-outline-primary border-0" title="Gestionar Roles" 
+                            (click)="abrirModalRoles(rolesModal, u)">
+                            <i class="bi bi-shield-lock fs-5"></i>
+                          </button>
+                          <button class="btn btn-sm btn-outline-secondary border-0" title="Editar" 
+                            (click)="abrirModalEdicion(usuarioModal, u)">
+                            <i class="bi bi-pencil-square fs-5"></i>
+                          </button>
+                          <button class="btn btn-sm btn-outline-danger border-0" title="Dar de Baja" 
+                            (click)="abrirModalBaja(u.id, confirmarBajaModal)">
+                            <i class="bi bi-person-x-fill fs-5"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- CONTROLES DE PAGINACIÓN -->
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2">
+              <span class="text-muted small">Mostrando página {{ currentPage + 1 }} de {{ totalPages }} (Total: {{ totalElements }} usuarios)</span>
+              <nav aria-label="Navegación de usuarios">
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item" [class.disabled]="currentPage === 0">
+                    <button class="page-link" (click)="cambiarPagina(currentPage - 1)">Anterior</button>
+                  </li>
+                  <li class="page-item" [class.disabled]="currentPage >= totalPages - 1 || totalPages === 0">
+                    <button class="page-link" (click)="cambiarPagina(currentPage + 1)">Siguiente</button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          }
+        }
 
       </div>
     </section>
@@ -77,6 +112,7 @@
   }
 }
 
+<!-- Modal Nuevo Usuario -->
 <ng-template #usuarioModal let-modal>
   <div class="modal-header modal-header-red text-white">
     <h5 class="modal-title fw-bold">Registrar Nuevo Usuario</h5>
@@ -140,12 +176,12 @@
     <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancelar</button>
     <button type="button" class="btn btn-danger" (click)="guardarUsuario()">
         {{ isEditMode ? 'Actualizar Usuario' : 'Crear Usuario' }}
-</button>  </div>
+    </button>
+  </div>
 </ng-template>
 
-
+<!-- Modal Gestión de Permisos -->
 <ng-template #rolesModal let-modal>
-  <!-- Encabezado con el rojo corporativo -->
   <div class="modal-header text-white border-0" style="background-color: #d81b27;">
     <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock me-2"></i> Gestión de Permisos</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>

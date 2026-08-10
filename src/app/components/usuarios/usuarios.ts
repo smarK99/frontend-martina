@@ -2,7 +2,7 @@ import { Component, inject, OnInit, TemplateRef, ViewChild } from '@angular/core
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { BehaviorSubject, Observable, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, switchMap, combineLatest, tap, catchError, of, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { AuthService } from '../../services/auth-service';
 import { UsuarioService } from '../../services/usuario.service';
@@ -24,9 +24,18 @@ export class Usuarios implements OnInit {
 
   role$ = this.auth.role$;
   
-  // Estado de la tabla
+  // ==========================================
+  // VARIABLES DE PAGINACIÓN Y FILTROS
+  // ==========================================
   private refresh$ = new BehaviorSubject<void>(undefined);
-  usuarios$!: Observable<any[]>;
+  filterSubject = new BehaviorSubject<string>(''); // Controla el texto del buscador
+  
+  currentPage = 0;
+  pageSize = 15;
+  totalElements = 0;
+  totalPages = 0;
+  isLoadingTabla = false;
+  usuarios: any[] = []; // Reemplazamos el Observable por un array normal para la vista
 
   // Formulario reactivo
   usuarioForm: FormGroup;
@@ -56,14 +65,55 @@ export class Usuarios implements OnInit {
       domicilioUsuario: [''],
       claveUsuario: ['', Validators.required]
     });
-
-    // Enganchamos la tabla al backend
-    this.usuarios$ = this.refresh$.pipe(
-      switchMap(() => this.usuarioService.getAll())
-    );
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.configurarPaginacionReactiva();
+  }
+
+  // ==========================================
+  // LÓGICA REACTIVA DE PAGINACIÓN Y BÚSQUEDA
+  // ==========================================
+  configurarPaginacionReactiva() {
+    combineLatest([
+      this.filterSubject.pipe(debounceTime(400), distinctUntilChanged()), // Espera a que termine de tipear
+      this.refresh$,
+      this.role$
+    ]).pipe(
+      tap(() => this.isLoadingTabla = true),
+      switchMap(([termino, _, role]) => {
+        
+        // Seguridad: Si no es admin o dueño, no traemos la lista
+        if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO') {
+          return of({ content: [], totalElements: 0, totalPages: 0 });
+        }
+
+        return this.usuarioService.buscarPaginadoYFiltrado(termino, this.currentPage, this.pageSize).pipe(
+          catchError(error => {
+            console.error('🚨 Error al traer usuarios del backend:', error);
+            return of({ content: [], totalElements: 0, totalPages: 0 });
+          })
+        );
+      })
+    ).subscribe(response => {
+      this.totalElements = response.totalElements || 0;
+      this.totalPages = response.totalPages || 0;
+      this.usuarios = response.content || []; 
+      this.isLoadingTabla = false; 
+    });
+  }
+
+  onFilterChange(value: string) {
+    this.currentPage = 0; 
+    this.filterSubject.next(value.trim()); 
+  }
+
+  cambiarPagina(nuevaPagina: number) {
+    if (nuevaPagina >= 0 && nuevaPagina < this.totalPages) {
+      this.currentPage = nuevaPagina;
+      this.refresh$.next(); 
+    }
+  }
 
   mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
     this.mensajeAlerta = mensaje;

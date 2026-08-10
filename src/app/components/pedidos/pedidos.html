@@ -11,31 +11,55 @@
 
 <section class="py-4">
   <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    
+    <!-- CABECERA DE FILTROS REDISEÑADA -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-3 gap-3">
       <h2 class="h4 mb-0">Pedidos</h2>
 
-      <div class="d-flex gap-2 align-items-center flex-wrap">
+      <div class="d-flex flex-column align-items-md-end gap-2 w-100">
         
-        <!-- BUSCADOR POR TEXTO (ID o Importe) -->
-        <div class="input-group input-group-sm" style="width: 250px;">
-          <input type="search" class="form-control" placeholder="Buscar N° Pedido o Importe..." 
-                 #searchInput (input)="onFilterChange(searchInput.value)" />
-          <button class="btn btn-outline-secondary" (click)="onFilterChange(searchInput.value)">
-            <i class="bi bi-search"></i>
-          </button>
+        <!-- PRIMERA LÍNEA: Filtros (Estado, Fecha, Sucursal) -->
+        <div class="d-flex gap-2 flex-wrap justify-content-md-end w-100">
+          
+          <!-- SELECTOR DE ESTADO -->
+          <select class="form-select form-select-sm w-auto" (change)="onEstadoFilterChange($any($event.target).value)">
+            <option value="0">Todos los estados</option>
+            <option value="1">Creado</option>
+            <option value="2">En Preparación</option>
+            <option value="3">Listo</option>
+            <option value="4">Entregado</option>
+            <option value="5">Cancelado</option>
+          </select>
+
+          <!-- SELECTOR DE FECHA -->
+          <div class="input-group input-group-sm w-auto">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-calendar3"></i></span>
+            <input type="date" class="form-control" title="Filtrar por fecha" 
+                   (change)="onDateFilterChange($any($event.target).value)">
+          </div>
+
+          <!-- SELECTOR DE SUCURSAL -->
+          @if ((role$ | async) !== 'ROLE_CLIENTE') {
+            <select class="form-select form-select-sm w-auto" (change)="onSucursalFilterChange($event)">
+              <option value="">Todas las sucursales</option>
+              @for (sucursal of sucursales; track sucursal.id) {
+                <option [value]="sucursal.id">{{ sucursal.nombreSucursal }}</option>
+              }
+            </select>
+          }
         </div>
 
-        <!-- SELECTOR DE SUCURSAL -->
-        @if ((role$ | async) !== 'ROLE_CLIENTE') {
-          <select class="form-select form-select-sm" (change)="onSucursalFilterChange($event)" style="min-width: 220px;">
-            <option value="">Todas las sucursales</option>
-            @for (sucursal of sucursales; track sucursal.id) {
-              <option [value]="sucursal.id">{{ sucursal.nombreSucursal }}</option>
-            }
-          </select>
-        }
-      </div>
+        <!-- SEGUNDA LÍNEA: Buscador (Independiente) -->
+        <div class="input-group input-group-sm w-100" style="max-width: 400px;">
+          <span class="input-group-text bg-white text-secondary"><i class="bi bi-search"></i></span>
+          <input type="search" class="form-control border-start-0 ps-0" placeholder="Buscar N° Pedido o Importe..." 
+                 #searchInput (input)="onFilterChange(searchInput.value)" />
+        </div>
 
+      </div>
+    </div>
+    
+    <div class="d-flex justify-content-end mb-3">
       @if (role$ | async; as role) {
         <div class="text-muted small fw-bold d-none d-lg-block">
           @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
@@ -59,24 +83,24 @@
       </div>
     } @else {
       @if (pedidos.length === 0) {
-        <div class="alert alert-info border-0 shadow-sm"><i class="bi bi-info-circle me-2"></i> No hay pedidos para mostrar en esta vista.</div>
+        <div class="alert alert-info border-0 shadow-sm"><i class="bi bi-info-circle me-2"></i> No se encontraron pedidos para los filtros seleccionados.</div>
       } @else {
-        <div class="table-responsive">
-          <table class="table table-striped align-middle">
-            <thead>
+        <div class="table-responsive bg-white shadow-sm rounded border border-light-subtle">
+          <table class="table table-striped align-middle mb-0">
+            <thead class="table-light">
               <tr>
-                <th>#</th>
+                <th class="ps-3">#</th>
                 <th>Fecha</th>
                 <th>Cliente</th>
                 <th>Total</th>
                 <th>Estado</th>
-                <th></th>
+                <th class="pe-3"></th>
               </tr>
             </thead>
             <tbody>
               @for (p of pedidos; track p.id) {
               <tr>
-                <td>{{ p.id }}</td>
+                <td class="ps-3">{{ p.id }}</td>
                 <td>{{ p.fechaHoraAltaPedido | date:'short' }}</td>
                 <td>{{ p.sucursal.nombreSucursal }}</td>
                 <td class="fw-bold">{{ p.importeTotalPedido | currency:'ARS' }}</td>
@@ -85,20 +109,19 @@
                           'bg-success': p.estadoPedido.nombreEstadoPedido ==='ENTREGADO',
                           'bg-danger': p.estadoPedido.nombreEstadoPedido ==='CANCELADO',
                           'bg-warning text-dark': p.estadoPedido.nombreEstadoPedido==='EN PREPARACIÓN' || p.estadoPedido.nombreEstadoPedido==='ENVIADO',
-                          'bg-secondary': p.estadoPedido.nombreEstadoPedido!=='ENTREGADO' && p.estadoPedido.nombreEstadoPedido!=='CANCELADO' && p.estadoPedido.nombreEstadoPedido!=='EN PREPARACIÓN'
+                          'bg-secondary': p.estadoPedido.nombreEstadoPedido!=='ENTREGADO' && p.estadoPedido.nombreEstadoPedido!=='CANCELADO' && p.estadoPedido.nombreEstadoPedido!=='EN PREPARACIÓN' && p.estadoPedido.nombreEstadoPedido!=='ENVIADO'
                         }">{{ p.estadoPedido.nombreEstadoPedido }}</span>
                 </td>
-                <td class="text-end">
+                <td class="text-end pe-3">
                   <button class="btn btn-sm btn-outline-primary me-1"
                     (click)="abrirModalDetalle(p.id, detallePedidoModal)">Ver</button>
                   
-                  <!-- FIX: Botón Cancelar habilitado para Cliente, Admin y Dueño -->
                   @if (role$ | async; as userRole) {
                     @if ((userRole === 'ROLE_CLIENTE' || userRole === 'ROLE_ADMIN' || userRole === 'ROLE_DUENIO') && 
                          p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO' && 
                          p.estadoPedido.nombreEstadoPedido !== 'CANCELADO') {
                       
-                      <button class="btn btn-sm btn-outline-danger me-1" (click)="abrirModalCancelacion(p.id, confirmarCancelacionModal)" title="Cancelar Pedido">
+                      <button class="btn btn-sm btn-outline-danger" (click)="abrirModalCancelacion(p.id, confirmarCancelacionModal)" title="Cancelar Pedido">
                         Cancelar
                       </button>
                       
@@ -112,7 +135,7 @@
         </div>
 
         <!-- CONTROLES DE PAGINACIÓN -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2">
           <span class="text-muted small">Mostrando página {{ currentPage + 1 }} de {{ totalPages }} (Total: {{ totalElements }} pedidos)</span>
           
           <nav aria-label="Navegación de pedidos">
@@ -238,7 +261,7 @@
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
-    <button type="button" class="btn bg-brand" (click)="guardarPedido()">Confirmar Pedido</button>
+    <button type="button" class="btn bg-brand text-white" (click)="guardarPedido()">Confirmar Pedido</button>
   </div>
 </ng-template>
 
@@ -307,7 +330,7 @@
     </div>
     }
   </div>
-  <div class="modal-footer bg-light">
+  <div class="modal-footer bg-light border-0">
     <button type="button" class="btn btn-danger" (click)="cerrarModalDetalle()">Cerrar</button>
   </div>
 </ng-template>

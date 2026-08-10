@@ -1,7 +1,6 @@
 import { Component, inject, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-// AÑADIDOS debounceTime y distinctUntilChanged para el buscador
 import { Observable, combineLatest, BehaviorSubject, switchMap, tap, catchError, of, debounceTime, distinctUntilChanged } from 'rxjs';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -65,9 +64,10 @@ export class Pedidos implements OnInit {
   totalPages = 0;
   
   filtroSucursal$ = new BehaviorSubject<number | ''>(''); 
-  filterSubject = new BehaviorSubject<string>(''); // NUEVO: Controla el texto del buscador
+  filterSubject = new BehaviorSubject<string>(''); // Controla el texto del buscador
+  dateFilterSubject = new BehaviorSubject<string>(''); // NUEVO: Controla la fecha
+  estadoFilterSubject = new BehaviorSubject<number>(0); // NUEVO: Controla el estado
   
-  // AHORA USAMOS VARIABLES NORMALES (Sin Async Pipe)
   isLoadingTabla = false;
   pedidos: any[] = [];
 
@@ -91,7 +91,7 @@ export class Pedidos implements OnInit {
   mensajeAlerta: string = '';
   tipoAlerta: 'exito' | 'error' = 'exito';
 
-  modalConfirmacionRef: any; // <-- NUEVA VARIABLE
+  modalConfirmacionRef: any; 
 
   mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
     this.mensajeAlerta = mensaje;
@@ -123,11 +123,13 @@ export class Pedidos implements OnInit {
     combineLatest([
       this.filtroSucursal$,
       this.filterSubject.pipe(debounceTime(400), distinctUntilChanged()), // Espera a que el usuario deje de tipear
+      this.dateFilterSubject.pipe(distinctUntilChanged()), // NUEVO: Filtro de fecha
+      this.estadoFilterSubject.pipe(distinctUntilChanged()), // NUEVO: Filtro de estado
       this.refresh$,
       this.role$
     ]).pipe(
       tap(() => this.isLoadingTabla = true),
-      switchMap(([sucursalId, termino, _, role]) => {
+      switchMap(([sucursalId, termino, fecha, idEstado, _, role]) => {
         
         // Si no hay sucursal seleccionada, mandamos 0 para buscar en todas
         let idAFiltrar: number = Number(sucursalId) || 0;
@@ -136,8 +138,8 @@ export class Pedidos implements OnInit {
           idAFiltrar = this.CURRENT_CLIENT_ID;
         }
 
-        // Llamamos directamente a la nueva Super Consulta del servicio
-        return this.pedidoService.buscarPaginadoYFiltrado(termino, idAFiltrar, this.currentPage, this.pageSize).pipe(
+        // Llamamos directamente a la nueva Super Consulta del servicio (con los 6 parámetros)
+        return this.pedidoService.buscarPaginadoYFiltrado(termino, idAFiltrar, fecha, idEstado, this.currentPage, this.pageSize).pipe(
           catchError(error => {
             console.error('🚨 Error crítico al traer pedidos del backend:', error);
             // Si hay error devolvemos una página vacía para apagar el spinner
@@ -202,6 +204,17 @@ export class Pedidos implements OnInit {
   onSucursalFilterChange(event: any) {
     this.currentPage = 0; 
     this.filtroSucursal$.next(event.target.value);
+  }
+
+  // NUEVOS METODOS PARA FECHA Y ESTADO
+  onDateFilterChange(dateValue: string) {
+    this.currentPage = 0; 
+    this.dateFilterSubject.next(dateValue);
+  }
+
+  onEstadoFilterChange(estadoValue: string) {
+    this.currentPage = 0;
+    this.estadoFilterSubject.next(Number(estadoValue));
   }
 
   openModal(modalTemplate: any) {
@@ -314,7 +327,6 @@ export class Pedidos implements OnInit {
 
   abrirModalCancelacion(id: number, modalTemplate: any) {
     this.pedidoACancelar = id;
-    // Guardamos la referencia del modal de confirmación
     this.modalConfirmacionRef = this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
   }
 
@@ -322,7 +334,7 @@ export class Pedidos implements OnInit {
     if (this.pedidoACancelar) {
       this.pedidoService.cancelarPedido(this.pedidoACancelar).subscribe({
         next: (respuesta) => {
-          if (this.modalConfirmacionRef) this.modalConfirmacionRef.close(); // <-- FIX: Cerramos solo la confirmación
+          if (this.modalConfirmacionRef) this.modalConfirmacionRef.close(); 
           this.pedidoACancelar = null;    
           this.refresh$.next();          
           this.mostrarAlerta('El pedido ha sido cancelado exitosamente.', 'exito');
