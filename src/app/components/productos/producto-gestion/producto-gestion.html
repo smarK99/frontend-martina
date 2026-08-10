@@ -1,8 +1,8 @@
-<!--Modal con formulario-->
+<!--Modal con formulario de Alta/Edición-->
 <ng-template #altaProductoModal let-modal>
 
   <div class="modal-header modal-header-red text-white">
-    <h5 class="modal-title">Alta de Nuevo Producto</h5>
+    <h5 class="modal-title">{{ isEditMode ? 'Editar Producto' : 'Alta de Nuevo Producto' }}</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
   </div>
 
@@ -94,9 +94,29 @@
             de este producto.</div>
         </div>
 
-        <div class="col-12">
-          <label class="form-label mt-3">Descripción Adicional</label>
-          <textarea class="form-control" formControlName="descripcion" rows="3"></textarea>
+        <div class="col-md-6 mt-4">
+          <label class="form-label mt-2">Descripción Comercial (Pública)</label>
+          <textarea class="form-control" formControlName="descripcion" rows="4" placeholder="Lo que verá el cliente..."></textarea>
+        </div>
+
+        <div class="col-md-6 mt-4">
+          <label class="form-label mt-2 text-danger"><i class="bi bi-lock-fill"></i> Preparación (Interno)</label>
+          <textarea class="form-control bg-light" formControlName="preparacion" rows="4" placeholder="Paso a paso para armar el producto..."></textarea>
+        </div>
+        
+        <div class="col-md-12 mt-4">
+          <label class="form-label mt-2">Foto del Producto</label>
+          <input type="file" class="form-control mb-2" accept="image/*" (change)="onFileSelected($event)">
+          
+          @if (imagenBase64) {
+            <div class="text-center p-2 border rounded bg-light mt-2">
+              <img [src]="imagenBase64" alt="Vista previa" class="img-fluid rounded" style="max-height: 110px; object-fit: contain;">
+            </div>
+          } @else {
+            <div class="text-center p-4 border rounded bg-light text-muted small mt-2 fst-italic">
+              Sin imagen
+            </div>
+          }
         </div>
 
       </div>
@@ -105,27 +125,26 @@
 
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
-    <button type="button" class="btn bg-brand text-white" (click)="guardarProducto()">Crear Producto</button>
+    <button type="button" class="btn bg-brand text-white" (click)="guardarProducto()">
+      {{ isEditMode ? 'Actualizar Producto' : 'Crear Producto' }}
+    </button>
   </div>
-
 </ng-template>
+
 
 <section class="py-5 bg-light">
   <div class="container">
     
-    <!-- CABECERA CON FILTROS COMBINADOS -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 gap-3">
       <h2 class="mb-0 text-center text-md-start">Nuestros Productos</h2>
 
       <div class="d-flex gap-2 w-100 justify-content-md-end" style="max-width: 550px;">
-        <!-- Buscador de Texto -->
         <div class="input-group">
           <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
           <input type="text" class="form-control border-start-0 ps-0" placeholder="Buscar por nombre..."
                  #buscarInput (input)="onBuscarTexto(buscarInput.value)">
         </div>
 
-        <!-- Selector de Categoría -->
         <select class="form-select fw-semibold text-secondary" style="min-width: 200px;" (change)="onFiltrarCategoria($event)">
           <option value="TODAS" selected>Todas las categorías</option>
           @for (cat of categoriasDisponibles; track cat.id) {
@@ -135,7 +154,6 @@
       </div>
     </div>
 
-    <!-- MENSAJE SI NO HAY RESULTADOS -->
     @if (productosFiltrados.length === 0) {
       <div class="alert alert-info text-center py-5 shadow-sm border-0">
         <i class="bi bi-search fs-1 d-block mb-3 text-secondary"></i>
@@ -143,27 +161,26 @@
         <p class="mb-0">Probá seleccionando otra categoría o cambiando el texto de búsqueda.</p>
       </div>
     } @else {
-      <!-- GRILLA DE PRODUCTOS -->
       <div class="row g-4">
         @for (p of productosFiltrados; track p.id) {
         <div class="col-md-4">
           <div class="card h-100 shadow-sm border-0 hover-effect">
             
-            <img [src]="getImagenProducto(p.nombreProducto)" class="card-img-top p-3" [alt]="p.nombreProducto" style="height: 200px; object-fit: contain;" />
+            <img [src]="getImagenReal(p)" class="card-img-top p-3" [alt]="p.nombreProducto" style="height: 200px; object-fit: contain;" />
             
             <div class="card-body d-flex flex-column">
               <h5 class="card-title fw-bold text-dark">{{ p.nombreProducto }}</h5>
               <p class="card-text flex-grow-1 text-muted small">{{ p.descripcionProducto }}</p>
               
               <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                <button class="btn btn-outline-danger btn-sm fw-semibold">
+                <button class="btn btn-outline-danger btn-sm fw-semibold" (click)="abrirModalDetalles(detallesModal, p)">
                   Ver Detalles
                 </button>
 
                 @if (role$ | async; as role) {
                   @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
                     <div class="btn-group gap-2">
-                      <button class="btn btn-sm btn-light text-secondary border" title="Editar Producto">
+                      <button class="btn btn-sm btn-light text-secondary border" title="Editar Producto" (click)="abrirModalEdicion(altaProductoModal, p)">
                         <i class="bi bi-pencil-square"></i>
                       </button>
                       <button class="btn btn-sm btn-light text-danger border" title="Eliminar Producto" (click)="abrirModalBaja(p.id, confirmarBajaModal)">
@@ -181,6 +198,61 @@
     }
   </div>
 </section>
+
+<!-- Modal Ver Detalles del Producto -->
+<ng-template #detallesModal let-modal>
+  <div class="modal-header border-0 bg-light">
+    <h5 class="modal-title fw-bold text-dark">{{ productoSeleccionadoDetalle?.nombreProducto }}</h5>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body p-0">
+    <div class="text-center bg-white border-bottom p-3">
+      <img [src]="getImagenReal(productoSeleccionadoDetalle)" 
+           [alt]="productoSeleccionadoDetalle?.nombreProducto" 
+           class="img-fluid rounded" style="max-height: 250px; object-fit: contain;">
+    </div>
+    
+    <div class="p-4">
+      <div class="mb-4">
+        <span class="badge bg-danger mb-2">{{ productoSeleccionadoDetalle?.categoria?.nombreCategoria }}</span>
+        <p class="text-muted">{{ productoSeleccionadoDetalle?.descripcionProducto }}</p>
+      </div>
+
+      <!-- ZONA RESTRINGIDA: Solo Admin, Dueño o Empleado (Excluye nulos y CLIENTE) -->
+      @if (role$ | async; as role) {
+        @if (role !== 'ROLE_CLIENTE') {
+          
+          <div class="bg-light p-3 rounded border mt-4">
+            <h6 class="fw-bold text-danger border-bottom border-danger pb-2 mb-3">
+              <i class="bi bi-shield-lock-fill me-1"></i> Información Interna
+            </h6>
+            
+            <h6 class="fw-bold text-dark mb-2">Insumos Utilizados</h6>
+            @if (productoSeleccionadoDetalle?.productoInsumoList?.length > 0) {
+              <ul class="list-group list-group-flush mb-3">
+                @for (pi of productoSeleccionadoDetalle.productoInsumoList; track $index) {
+                  <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                    <span class="text-secondary"><i class="bi bi-dot"></i> {{ pi.insumo?.nombreInsumo }}</span>
+                    <span class="badge bg-white text-dark border fw-bold">{{ pi.cantidadInsumo }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="text-muted small fst-italic mb-3">Esta receta no tiene insumos registrados.</p>
+            }
+
+            <h6 class="fw-bold text-dark mt-3 mb-2">Paso a paso de preparación</h6>
+            <p class="text-secondary small" style="white-space: pre-wrap;">{{ productoSeleccionadoDetalle?.recetaPreparacion || 'No hay instrucciones de preparación cargadas.' }}</p>
+          </div>
+          
+        }
+      }
+    </div>
+  </div>
+  <div class="modal-footer border-0">
+    <button type="button" class="btn btn-secondary w-100" (click)="modal.dismiss()">Cerrar</button>
+  </div>
+</ng-template>
 
 <!-- Modal Confirmar Baja -->
 <ng-template #confirmarBajaModal let-modal>
@@ -201,10 +273,9 @@
   </div>
 </ng-template>
 
-<!-- Modal de Alerta Genérica (Éxito / Error) -->
+<!-- Modal de Alerta Genérica -->
 <ng-template #alertaModal let-modal>
   <div class="modal-body text-center py-4">
-    
     @if (tipoAlerta === 'exito') {
       <i class="bi bi-check-circle-fill text-success d-block mb-3 animate__animated animate__bounceIn" style="font-size: 3.5rem;"></i>
       <h5 class="fw-bold text-success">¡Éxito!</h5>
@@ -212,10 +283,8 @@
       <i class="bi bi-x-circle-fill text-danger d-block mb-3 animate__animated animate__shakeX" style="font-size: 3.5rem;"></i>
       <h5 class="fw-bold text-danger">¡Error!</h5>
     }
-    
     <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
   </div>
-  
   @if (tipoAlerta === 'error') {
     <div class="modal-footer border-0 justify-content-center bg-light">
       <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>

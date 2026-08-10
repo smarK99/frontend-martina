@@ -24,7 +24,6 @@ interface ItemInsumoReceta {
 })
 export class ProductoGestion implements OnInit {
   
-  // --- INYECCIONES DE SERVICIOS ---
   private categoriaService = inject(CategoriaService);
   private insumoService = inject(InsumosService);
   private authService = inject(AuthService); 
@@ -36,7 +35,6 @@ export class ProductoGestion implements OnInit {
 
   @ViewChild('altaProductoModal') modalAltaProducto!: TemplateRef<any>;
 
-  // --- VARIABLES DE DATOS Y FILTROS ---
   productosOriginales: Producto[] = [];
   productosFiltrados: Producto[] = [];
   insumosDisponibles: any[] = [];
@@ -52,16 +50,21 @@ export class ProductoGestion implements OnInit {
   productoForm: FormGroup;
   private refresh$ = new BehaviorSubject<void>(undefined);
 
-  // --- VARIABLES ALERTA Y BAJA ---
   productoABajar: number | null = null;
   @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
   mensajeAlerta: string = '';
   tipoAlerta: 'exito' | 'error' = 'exito';
 
+  isEditMode = false;
+  productoSeleccionadoId: number | null = null;
+  imagenBase64: string | null = null; 
+  productoSeleccionadoDetalle: any = null; 
+
   constructor() {
     this.productoForm = this.fb.group({
       nombre: ['', Validators.required],
       descripcion: [''],
+      preparacion: [''], // <-- Campo para las instrucciones internas
       categoria: ['', Validators.required]
     });
   }
@@ -69,7 +72,6 @@ export class ProductoGestion implements OnInit {
   ngOnInit() {
     this.loadData();
     
-    // Suscripción reactiva para cargar y filtrar productos localmente
     this.refresh$.pipe(
       switchMap(() => this.productoService.getAll())
     ).subscribe({
@@ -86,18 +88,13 @@ export class ProductoGestion implements OnInit {
     this.insumoService.getAll().subscribe(data => { this.insumosDisponibles = data });
   }
 
-  // ==========================================
-  // LÓGICA DE FILTRADO COMBINADO
-  // ==========================================
   aplicarFiltrosCombinados() {
     let temp = this.productosOriginales;
 
-    // 1. Filtro por Categoría
     if (this.filtroCategoria !== 'TODAS') {
       temp = temp.filter(p => p.categoria?.id == this.filtroCategoria);
     }
 
-    // 2. Filtro por Texto
     if (this.filtroTexto) {
       const q = this.filtroTexto.toLowerCase().trim();
       temp = temp.filter(p =>
@@ -120,25 +117,15 @@ export class ProductoGestion implements OnInit {
     this.aplicarFiltrosCombinados();
   }
 
-  // ==========================================
-  // LÓGICA DE ALERTA GENÉRICA
-  // ==========================================
   mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
     this.mensajeAlerta = mensaje;
     this.tipoAlerta = tipo;
-    
     this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
-
     if (tipo === 'exito') {
-      setTimeout(() => {
-        this.modalService.dismissAll();
-      }, 2000);
+      setTimeout(() => { this.modalService.dismissAll(); }, 2000);
     }
   }
 
-  // ==========================================
-  // LÓGICA DE RECETA (INSUMOS)
-  // ==========================================
   agregarInsumo() {
     if (!this.tempInsumoId || this.tempCantidadInsumo <= 0) return;
 
@@ -166,32 +153,72 @@ export class ProductoGestion implements OnInit {
     this.insumosDelProducto.splice(index, 1);
   }
 
-  // ==========================================
-  // ALTA DE PRODUCTO
-  // ==========================================
-  abrirModalAltaProducto() {
-    const modalRef = this.modalService.open(this.modalAltaProducto, { size: 'lg', centered: true });
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.imagenBase64 = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
 
-    modalRef.result.then(
+  abrirModalAltaProducto() {
+    this.isEditMode = false;
+    this.productoSeleccionadoId = null;
+    this.limpiarFormularioAlta();
+    
+    this.modalService.open(this.modalAltaProducto, { size: 'lg', centered: true }).result.then(
       () => { this.limpiarFormularioAlta(); }, 
       () => { this.limpiarFormularioAlta(); }  
     );
   }
 
+  abrirModalEdicion(modalTemplate: any, producto: any) {
+    this.isEditMode = true;
+    this.productoSeleccionadoId = producto.id;
+    this.imagenBase64 = producto.imagenProducto || null;
+
+    this.productoForm.patchValue({
+      nombre: producto.nombreProducto,
+      descripcion: producto.descripcionProducto,
+      preparacion: producto.recetaPreparacion || '', // <-- Carga las instrucciones
+      categoria: producto.categoria?.id || ''
+    });
+
+    if (producto.productoInsumoList) {
+      this.insumosDelProducto = producto.productoInsumoList.map((pi: any) => ({
+        insumoId: pi.insumo?.id,
+        nombreInsumo: pi.insumo?.nombreInsumo,
+        cantidad: pi.cantidadInsumo
+      }));
+    } else {
+      this.insumosDelProducto = [];
+    }
+
+    this.modalService.open(modalTemplate, { size: 'lg', centered: true }).result.then(
+      () => { this.limpiarFormularioAlta(); }, 
+      () => { this.limpiarFormularioAlta(); }  
+    );
+  }
+
+  abrirModalDetalles(modalTemplate: any, producto: any) {
+    this.productoSeleccionadoDetalle = producto;
+    this.modalService.open(modalTemplate, { size: 'md', centered: true });
+  }
+
   closeModal() {
     this.modalService.dismissAll(); 
-    this.productoForm.reset(); 
+    this.limpiarFormularioAlta();
   }
 
   private limpiarFormularioAlta() {
-    this.productoForm.reset({
-      nombre: '',
-      categoria: '',
-      descripcion: ''
-    });
+    this.productoForm.reset({ nombre: '', categoria: '', descripcion: '', preparacion: '' });
     this.insumosDelProducto = [];
     this.tempInsumoId = null;
     this.tempCantidadInsumo = 1;
+    this.imagenBase64 = null;
   }
 
   guardarProducto() {
@@ -199,6 +226,8 @@ export class ProductoGestion implements OnInit {
       const payload = {
         nombreProducto: this.productoForm.value.nombre,
         descripcionProducto: this.productoForm.value.descripcion || '',
+        recetaPreparacion: this.productoForm.value.preparacion || '', // <-- Envía las instrucciones
+        imagenProducto: this.imagenBase64,
         idCategoria: Number(this.productoForm.value.categoria),
         apiList: this.insumosDelProducto.map(item => ({
           idInsumo: item.insumoId,
@@ -206,19 +235,31 @@ export class ProductoGestion implements OnInit {
         }))
       };
 
-      this.productoService.create(payload).subscribe({
-        next: (respuesta) => {
-          this.closeModal();
-          this.refresh$.next();
-          setTimeout(() => {
-            this.mostrarAlerta('¡Producto creado con éxito!', 'exito');
-          }, 300);
-        },
-        error: (err) => {
-          console.error('Error al intentar crear el producto:', err);
-          this.mostrarAlerta('Hubo un error al guardar el producto.', 'error');
-        }
-      });
+      if (this.isEditMode && this.productoSeleccionadoId) {
+        this.productoService.update(this.productoSeleccionadoId, payload).subscribe({
+          next: () => {
+            this.closeModal();
+            this.refresh$.next();
+            setTimeout(() => this.mostrarAlerta('¡Producto actualizado con éxito!', 'exito'), 300);
+          },
+          error: (err) => {
+            console.error(err);
+            this.mostrarAlerta('Hubo un error al actualizar el producto.', 'error');
+          }
+        });
+      } else {
+        this.productoService.create(payload).subscribe({
+          next: () => {
+            this.closeModal();
+            this.refresh$.next();
+            setTimeout(() => this.mostrarAlerta('¡Producto creado con éxito!', 'exito'), 300);
+          },
+          error: (err) => {
+            console.error(err);
+            this.mostrarAlerta('Hubo un error al guardar el producto.', 'error');
+          }
+        });
+      }
 
     } else {
       this.productoForm.markAllAsTouched();
@@ -226,9 +267,6 @@ export class ProductoGestion implements OnInit {
     }
   }
 
-  // ==========================================
-  // BAJA DE PRODUCTOS
-  // ==========================================
   abrirModalBaja(id: number | undefined, modalTemplate: any) {
     if (!id) return; 
     this.productoABajar = id;
@@ -244,20 +282,20 @@ export class ProductoGestion implements OnInit {
           this.refresh$.next(); 
           setTimeout(() => this.mostrarAlerta('Producto eliminado exitosamente.', 'exito'), 300);
         },
-        error: (err) => {
-          console.error(err);
-          this.mostrarAlerta('Error al eliminar el producto.', 'error');
-        }
+        error: (err) => console.error(err)
       });
     }
   }
 
-  // ==========================================
-  // HELPER PARA IMÁGENES DINÁMICAS
-  // ==========================================
-  getImagenProducto(nombreProducto: string): string {
+  getImagenReal(producto: any): string {
+    if (producto.imagenProducto && producto.imagenProducto.trim() !== '') {
+      return producto.imagenProducto;
+    }
+    return this.getImagenFalsaPorDefecto(producto.nombreProducto);
+  }
+
+  getImagenFalsaPorDefecto(nombreProducto: string): string {
     if (!nombreProducto) return '/assets/martina-logo.png';
-    
     const nombre = nombreProducto.toLowerCase();
     
     if (nombre.includes('cocido')) return '/assets/jcocido.jpg';
