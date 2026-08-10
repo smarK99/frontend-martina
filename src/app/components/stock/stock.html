@@ -2,16 +2,7 @@
   @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_STOCK') {
     
     <app-action-bar title="Gestión de Stock">
-      <div ngbDropdown class="d-inline-block">
-        <button class="btn btn-outline-secondary" id="dropdownGestionar" ngbDropdownToggle>
-          Gestionar...
-        </button>
-        <div ngbDropdownMenu aria-labelledby="dropdownGestionar">
-          <button ngbDropdownItem>Categorías</button>
-          <button ngbDropdownItem>Insumos</button>
-          <button ngbDropdownItem>Productos</button>
-        </div>
-      </div>
+      <!-- Botón Gestionar ELIMINADO -->
       <button class="btn btn-danger d-flex align-items-center gap-2 ms-2" (click)="openModal(conteoModal)"
         title="Crear nuevo conteo">
         <i class="bi bi-plus-lg"></i> Nuevo conteo
@@ -21,22 +12,37 @@
     <section class="py-4">
       <div class="container">
         
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
           <h2 class="h4 mb-0">Conteos de Stock</h2>
 
-          <div class="d-flex gap-2 align-items-center">
-            <!-- Mantenemos el placeholder de main que es más descriptivo -->
-            <input type="search" class="form-control form-control-sm" placeholder="Buscar por empleado, producto o id..."
-              (input)="onStockFilterChange($any($event.target).value)" style="min-width: 240px" />
-            <button class="btn btn-sm btn-outline-secondary" (click)="onStockFilterChange('')">
-              Buscar
-            </button>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <!-- Selector de Fecha -->
+            <div class="input-group input-group-sm" style="width: auto;">
+              <span class="input-group-text bg-white text-secondary"><i class="bi bi-calendar3"></i></span>
+              <input type="date" class="form-control" title="Filtrar por fecha" 
+                     (change)="onDateFilterChange($any($event.target).value)">
+            </div>
+
+            <!-- Buscador de Texto (Placeholder actualizado) -->
+            <div class="input-group input-group-sm" style="min-width: 280px">
+              <span class="input-group-text bg-white text-secondary"><i class="bi bi-search"></i></span>
+              <input type="search" class="form-control border-start-0 ps-0" placeholder="Buscar por ID o empleado..."
+                #searchInput (input)="onStockFilterChange(searchInput.value)" />
+            </div>
           </div>
         </div> 
         
-        @if (visibleCounts$ | async; as counts) {
+        @if (isLoadingTabla) {
+          <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>
+            Cargando conteos…
+          </div>
+        } @else {
           @if (counts.length === 0) {
-            <div class="alert alert-info shadow-sm">No hay conteos para mostrar.</div>
+            <div class="alert alert-info text-center py-4 shadow-sm">
+              <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+              No se encontraron conteos de stock.
+            </div>
           } @else {
             <div class="table-responsive bg-white shadow-sm rounded border border-light-subtle">
               <table class="table table-hover align-middle mb-0">
@@ -64,7 +70,6 @@
                           <button class="btn btn-sm btn-outline-secondary" title="Modificar" (click)="abrirModalEdicion(conteoModal, c)">
                             <i class="bi bi-pencil"></i>
                           </button>
-                          <!-- Cambiá este botón en la tabla: -->
                           <button class="btn btn-sm btn-outline-danger" title="Eliminar" (click)="abrirModalEliminacion(c.id, confirmarEliminacionModal)">
                             <i class="bi bi-trash"></i>
                           </button>
@@ -75,20 +80,27 @@
                 </tbody>
               </table>
             </div>
-          }
-        } @else {
-          <!-- Mantenemos el spinner de carga de main -->
-          <div class="text-center py-5 text-muted">
-            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-            Cargando conteos…
-          </div>
-        }
 
+            <!-- CONTROLES DE PAGINACIÓN -->
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2">
+              <span class="text-muted small">Mostrando página {{ currentPage + 1 }} de {{ totalPages }} (Total: {{ totalElements }} conteos)</span>
+              <nav aria-label="Navegación de stock">
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item" [class.disabled]="currentPage === 0">
+                    <button class="page-link" (click)="cambiarPagina(currentPage - 1)">Anterior</button>
+                  </li>
+                  <li class="page-item" [class.disabled]="currentPage >= totalPages - 1 || totalPages === 0">
+                    <button class="page-link" (click)="cambiarPagina(currentPage + 1)">Siguiente</button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          }
+        }
       </div>
     </section>
 
   } @else {
-    <!-- Tu pantalla de bloqueo perfecta -->
     <div class="container py-5 mt-5">
       <div class="alert alert-danger shadow-sm p-4 text-center">
         <i class="bi bi-shield-lock-fill text-danger d-block mb-3" style="font-size: 3rem;"></i>
@@ -98,7 +110,6 @@
     </div>
   }
 } @else {
-  <!-- Tu pantalla de no logueado -->
   <div class="container py-5 mt-5">
     <div class="alert alert-secondary shadow-sm text-center p-4">
       Inicia sesión para ver el módulo de stock.
@@ -117,7 +128,6 @@
 
   <div class="modal-body">
     @if (selectedCount; as sc) {
-    <!-- Tabla con estilo similar a la imagen -->
     <div class="table-responsive">
       <table class="table table-bordered table-striped align-middle">
         <thead class="table-danger">
@@ -129,42 +139,39 @@
           </tr>
         </thead>
         <tbody>
+          <!-- PRODUCTOS -->
           @for (it of sc.csproductosList; track it.id) {
           <tr>
             <td class="text-center">{{ it.cantidadStockProducto }}</td>
-            <td>{{ it.producto.nombreProducto }}</td>
-            <td class="text-end">2000</td>
-            <td class="text-end">
-              {{ it.cantidadStockProducto | currency }}
+            <td><span class="badge bg-secondary me-2">Prod</span> {{ it.producto.nombreProducto }}</td>
+            <td class="text-end">{{ obtenerPrecioProducto(it.producto) | currency }}</td>
+            <td class="text-end fw-medium text-success">
+              {{ (it.cantidadStockProducto * obtenerPrecioProducto(it.producto)) | currency }}
             </td>
           </tr>
           }
 
+          <!-- INSUMOS -->
           @for (ins of sc.csinsumosList; track ins.id) {
           <tr>
             <td class="text-center">{{ ins.cantidadStockInsumo }}</td>
-            <td>{{ ins.insumo.nombreInsumo }}</td>
+            <td><span class="badge bg-light text-dark border me-2">Ins</span> {{ ins.insumo.nombreInsumo }}</td>
             <td class="text-end">
               {{ ins.insumo.precioCompraInsumo | currency }}
             </td>
-
-            <td class="text-end">
-              {{
-              ins.cantidadStockInsumo * ins.insumo.precioCompraInsumo
-              | currency
-              }}
+            <td class="text-end fw-medium text-success">
+              {{ ins.cantidadStockInsumo * ins.insumo.precioCompraInsumo | currency }}
             </td>
           </tr>
           }
         </tbody>
 
-        <!-- Fila total: si no tenés precios, mostrará 0 o '-' según lo calculado -->
         <tfoot class="table-danger">
           <tr class="total-row">
             <td colspan="2" class="text-center fw-bold">VALOR TOTAL STOCK</td>
             <td class="text-end"></td>
             <td class="text-end fw-bold">
-              {{ totalValue(sc) === 0 ? "$ 0" : "$" + totalValue(sc) }}
+              {{ totalValue(sc) | currency:'ARS' }}
             </td>
           </tr>
         </tfoot>
@@ -175,33 +182,32 @@
     }
   </div>
 
-  <div class="modal-footer">
-    <button class="btn bg-brand" (click)="modal.close()">Cerrar</button>
+  <div class="modal-footer bg-light border-0">
+    <button class="btn bg-brand text-white px-4" (click)="modal.close()">Cerrar</button>
   </div>
 </ng-template>
 
 <!-- Modal: crear/modificar conteo -->
 <ng-template #conteoModal let-modal>
   <div class="modal-header bg-danger text-white">
-    <h5 class="modal-title">{{ isEditMode ? 'Modificar Conteo #' + idConteoEditando : 'Nuevo Conteo de Stock' }}</h5>
+    <h5 class="modal-title"><i class="bi bi-clipboard-data me-2"></i>{{ isEditMode ? 'Modificar Conteo #' + idConteoEditando : 'Nuevo Conteo de Stock' }}</h5>
     <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
   </div>
 
-  <div class="modal-body">
+  <div class="modal-body p-4">
     <form [formGroup]="conteoForm">
-      <div class="row mb-3">
+      <div class="row mb-4">
         <div class="col-md-6">
-          <label class="form-label fw-bold">Empleado</label>
-          <input type="text" class="form-control" value="Empleado Actual" disabled />
+          <label class="form-label fw-bold small">Empleado actual</label>
+          <input type="text" class="form-control bg-light" value="Sesión Activa" disabled />
         </div>
       </div>
 
-      <h6 class="text-danger fw-bold border-bottom pb-2">
-        Conteo de Productos
-      </h6>
-      <div class="row g-2 mb-3 align-items-end bg-light p-2 rounded">
+      <!-- SECCIÓN PRODUCTOS -->
+      <h6 class="text-danger fw-bold border-bottom pb-2">Conteo de Productos</h6>
+      <div class="row g-2 mb-3 align-items-end bg-light p-3 rounded border border-light-subtle">
         <div class="col-md-6">
-          <label class="small fw-bold">Producto</label>
+          <label class="small fw-bold mb-1">Producto</label>
           <select class="form-select form-select-sm" [(ngModel)]="tempProductoId"
             [ngModelOptions]="{ standalone: true }">
             <option [ngValue]="null">Seleccionar producto...</option>
@@ -211,33 +217,35 @@
           </select>
         </div>
         <div class="col-md-3">
-          <label class="small fw-bold">Cant. Real</label>
+          <label class="small fw-bold mb-1">Cant. Real</label>
           <input type="number" class="form-control form-control-sm" [(ngModel)]="tempProductoCant"
             [ngModelOptions]="{ standalone: true }" />
         </div>
         <div class="col-md-3">
-          <button class="btn btn-sm btn-danger w-100" type="button" (click)="agregarProducto()">
-            Agregar
+          <button class="btn btn-sm btn-outline-danger w-100 fw-bold" type="button" (click)="agregarProducto()">
+            <i class="bi bi-plus-lg"></i> Agregar
           </button>
         </div>
       </div>
 
       @if (productosContados.length > 0) {
-      <table class="table table-sm table-bordered small mb-4">
+      <table class="table table-sm table-hover table-bordered small mb-4">
         <thead class="table-secondary">
           <tr>
             <th>Producto</th>
-            <th class="text-center">Cant.</th>
-            <th class="text-center"></th>
+            <th class="text-center" style="width: 100px;">Cant.</th>
+            <th class="text-center" style="width: 60px;"></th>
           </tr>
         </thead>
         <tbody>
           @for (p of productosContados; track $index) {
           <tr>
-            <td>{{ p.nombre }}</td>
-            <td class="text-center">{{ p.cantidadStockProducto }}</td>
-            <td class="text-center">
-              <i class="bi bi-trash text-danger" (click)="eliminarProducto($index)" style="cursor: pointer"></i>
+            <td class="align-middle">{{ p.nombre }}</td>
+            <td class="text-center align-middle fw-semibold">{{ p.cantidadStockProducto }}</td>
+            <td class="text-center align-middle">
+              <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="eliminarProducto($index)">
+                <i class="bi bi-trash-fill fs-5"></i>
+              </button>
             </td>
           </tr>
           }
@@ -245,10 +253,11 @@
       </table>
       }
 
-      <h6 class="text-danger fw-bold border-bottom pb-2">Conteo de Insumos</h6>
-      <div class="row g-2 mb-3 align-items-end bg-light p-2 rounded">
+      <!-- SECCIÓN INSUMOS -->
+      <h6 class="text-danger fw-bold border-bottom pb-2 mt-4">Conteo de Insumos</h6>
+      <div class="row g-2 mb-3 align-items-end bg-light p-3 rounded border border-light-subtle">
         <div class="col-md-6">
-          <label class="small fw-bold">Insumo</label>
+          <label class="small fw-bold mb-1">Insumo</label>
           <select class="form-select form-select-sm" [(ngModel)]="tempInsumoId" [ngModelOptions]="{ standalone: true }">
             <option [ngValue]="null">Seleccionar insumo...</option>
             @for (i of insumosDisponibles; track i.id) {
@@ -257,35 +266,35 @@
           </select>
         </div>
         <div class="col-md-3">
-          <label class="small fw-bold">Cant. Real</label>
+          <label class="small fw-bold mb-1">Cant. Real</label>
           <input type="number" class="form-control form-control-sm" [(ngModel)]="tempInsumoCant"
             [ngModelOptions]="{ standalone: true }" />
         </div>
         <div class="col-md-3">
-          <button class="btn btn-sm btn-danger w-100" type="button" (click)="agregarInsumo()">
-            Agregar
+          <button class="btn btn-sm btn-outline-danger w-100 fw-bold" type="button" (click)="agregarInsumo()">
+            <i class="bi bi-plus-lg"></i> Agregar
           </button>
         </div>
       </div>
 
       @if(insumosContados.length > 0){
-      <table class="table table-sm table-bordered small mb-3">
+      <table class="table table-sm table-hover table-bordered small mb-3">
         <thead class="table-secondary">
           <tr>
             <th>Insumo</th>
-            <th class="text-center">Cant.</th>
-            <th class="text-center"></th>
+            <th class="text-center" style="width: 100px;">Cant.</th>
+            <th class="text-center" style="width: 60px;"></th>
           </tr>
         </thead>
         <tbody>
           @for (i of insumosContados; track $index) {
           <tr>
-            <td>{{ i.nombre }}</td>
-            <td class="text-center">
-              {{ i.cantidadStockInsumo }}
-            </td>
-            <td class="text-center">
-              <i class="bi bi-trash text-danger" (click)="eliminarInsumo($index)" style="cursor: pointer"></i>
+            <td class="align-middle">{{ i.nombre }}</td>
+            <td class="text-center align-middle fw-semibold">{{ i.cantidadStockInsumo }}</td>
+            <td class="text-center align-middle">
+              <button type="button" class="btn btn-sm btn-link text-danger p-0" (click)="eliminarInsumo($index)">
+                <i class="bi bi-trash-fill fs-5"></i>
+              </button>
             </td>
           </tr>
           }
@@ -295,12 +304,10 @@
     </form>
   </div>
 
-  <div class="modal-footer">
-    <button class="btn btn-secondary" (click)="modal.dismiss()">
-      Cancelar
-    </button>
-    <button class="btn btn-danger" (click)="guardarConteo()">
-      {{ isEditMode ? 'Guardar Cambios' : 'Registrar Conteo' }}
+  <div class="modal-footer bg-light border-0">
+    <button class="btn btn-outline-secondary px-4" (click)="modal.dismiss()">Cancelar</button>
+    <button class="btn bg-brand text-white px-4" (click)="guardarConteo()">
+      <i class="bi bi-check-circle me-1"></i> {{ isEditMode ? 'Guardar Cambios' : 'Registrar Conteo' }}
     </button>
   </div>
 </ng-template>
@@ -339,7 +346,6 @@
     <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
   </div>
   
-  <!-- Solo mostramos el botón de cerrar si es un error, el de éxito se cierra solo -->
   @if (tipoAlerta === 'error') {
     <div class="modal-footer border-0 justify-content-center bg-light">
       <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>

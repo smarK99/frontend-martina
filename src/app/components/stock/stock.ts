@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ViewChild, TemplateRef } from '@angular/core
 import { CommonModule } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService } from '../../services/auth-service';
-import { Observable, combineLatest, map, BehaviorSubject, switchMap } from 'rxjs';
+import { Observable, combineLatest, map, BehaviorSubject, switchMap, debounceTime, distinctUntilChanged, tap, catchError, of } from 'rxjs';
 import { ConteoStockService } from '../../services/conteo-stock-service';
 import { ConteoStock } from '../../model/conteo-stock.model';
 import { ActionBar } from '../action-bar/action-bar';
@@ -41,11 +41,18 @@ export class Stock implements OnInit {
   private platformId = inject(PLATFORM_ID); //Soluciona problema de SSR con localStorage CANNOT GET /STOCK
 
   role$ = this.auth.role$;
-  visibleCounts$!: Observable<ConteoStock[]>;
 
-  // Tabla Principal
+  // --- VARIABLES DE PAGINACIÓN Y FILTROS ---
+  currentPage = 0;
+  pageSize = 15;
+  totalElements = 0;
+  totalPages = 0;
+  isLoadingTabla = false;
+  counts: ConteoStock[] = [];
+
   private refresh$ = new BehaviorSubject<void>(undefined);
-  counts$!: Observable<ConteoStock[]>;
+  private stockFilterSubject = new BehaviorSubject<string>('');
+  private dateFilterSubject = new BehaviorSubject<string>('');
 
   // Formulario y Listas
   conteoForm: FormGroup;
@@ -62,10 +69,6 @@ export class Stock implements OnInit {
   tempInsumoId: number | null = null;
   tempInsumoCant: number = 0;
 
-  // filtro reactivo
-  private stockFilterSubject = new BehaviorSubject<string>('');
-  stockFilter$ = this.stockFilterSubject.asObservable();
-
   // seleccionado para el modal
   selectedCount: ConteoStock | null = null;
 
@@ -81,38 +84,8 @@ export class Stock implements OnInit {
   tipoAlerta: 'exito' | 'error' = 'exito';
 
   constructor() {
-    // Conectamos la tabla al gatillo de refresco (Tu lógica reactiva)
-    this.counts$ = this.refresh$.pipe(
-      switchMap(() => this.stockService.getAll())
-    );
-
-    // Combina counts, role y filtro
-    this.visibleCounts$ = combineLatest([this.counts$, this.role$, this.stockFilter$]).pipe(
-      map(([counts, role, filter]) => {
-        const q = (filter || '').trim().toLowerCase();
-
-        // ESCUDO: Si no tiene rol o no es del equipo interno, devolver vacío (Tu seguridad)
-        if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO' && role !== 'ROLE_STOCK') {
-          return [];
-        }
-
-        // lista base (todos los conteos) ordenada por fecha
-        let list = counts.slice();
-
-        // Si hay query, filtramos por empleadoNombre, id o productos dentro de items
-        if (q) {
-          list = list.filter(c =>
-            (c.usuario.nombreCompletoUsuario || '').toLowerCase().includes(q) ||
-            c.id.toString().includes(q)
-          );
-        }
-
-        return list.sort((a, b) => +new Date(b.fechaHoraAltaConteoStock) - +new Date(a.fechaHoraAltaConteoStock));
-      })
-    );
-
     this.conteoForm = this.fb.group({
-      idUsuario: [this.obtenerIdUsuarioLogueado(), Validators.required], // ID del empleado logueado (Mejora de Santi)
+      idUsuario: [this.obtenerIdUsuarioLogueado(), Validators.required],
       descripcion: ['']
     });
   }
@@ -121,16 +94,70 @@ export class Stock implements OnInit {
     //Cargar datos iniciales
     this.productoService.getAll().subscribe(data => this.productosDisponibles = data);
     this.insumoService.getAll().subscribe(data => this.insumosDisponibles = data);
+    
+    // Iniciar el listener de paginación
+    this.configurarPaginacionReactiva();
   }
 
+  // ==========================================
+  // LÓGICA DE PAGINACIÓN REACTIVA COMBINADA
+  // ==========================================
+  configurarPaginacionReactiva() {
+    combineLatest([
+      this.stockFilterSubject.pipe(debounceTime(400), distinctUntilChanged()),
+      this.dateFilterSubject.pipe(distinctUntilChanged()),
+      this.refresh$,
+      this.role$
+    ]).pipe(
+      tap(() => this.isLoadingTabla = true),
+      switchMap(([termino, fecha, _, role]) => {
+        
+        // Seguridad: Si no tiene rol autorizado, corta la petición acá nomás.
+        if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO' && role !== 'ROLE_STOCK') {
+          return of({ content: [], totalElements: 0, totalPages: 0 });
+        }
+
+        return this.stockService.buscarPaginadoYFiltrado(termino, fecha, this.currentPage, this.pageSize).pipe(
+          catchError(error => {
+            console.error('Error al traer el stock:', error);
+            return of({ content: [], totalElements: 0, totalPages: 0 });
+          })
+        );
+      })
+    ).subscribe(response => {
+      this.totalElements = response.totalElements || 0;
+      this.totalPages = response.totalPages || 0;
+      this.counts = response.content || [];
+      this.isLoadingTabla = false;
+    });
+  }
+
+  onStockFilterChange(value: string) {
+    this.currentPage = 0;
+    this.stockFilterSubject.next(value.trim());
+  }
+
+  onDateFilterChange(dateValue: string) {
+    this.currentPage = 0;
+    this.dateFilterSubject.next(dateValue);
+  }
+
+  cambiarPagina(nuevaPagina: number) {
+    if (nuevaPagina >= 0 && nuevaPagina < this.totalPages) {
+      this.currentPage = nuevaPagina;
+      this.refresh$.next();
+    }
+  }
+
+  // ==========================================
+  // MANEJO DE MODALES Y ALERTAS
+  // ==========================================
   mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
     this.mensajeAlerta = mensaje;
     this.tipoAlerta = tipo;
     
-    // Abrimos el modal con backdrop 'static' para que el usuario no lo cierre clickeando afuera si es un error
     this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
 
-    // Si es éxito, lo cerramos automáticamente a los 2 segundos
     if (tipo === 'exito') {
       setTimeout(() => {
         this.modalService.dismissAll();
@@ -139,23 +166,20 @@ export class Stock implements OnInit {
   }
 
   // --- ELIMINAR CONTEO ---
-  // Variable para guardar el ID del conteo a eliminar
   conteoAEliminar: number | null = null;
 
-  // 1. Abre el modal de confirmación
   abrirModalEliminacion(id: number, modalTemplate: any) {
     this.conteoAEliminar = id;
     this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
   }
 
-  // 2. Ejecuta la eliminación si hace clic en "Sí, eliminar"
   confirmarEliminacion() {
     if (this.conteoAEliminar) {
       this.stockService.delete(this.conteoAEliminar).subscribe({
         next: () => {
-          this.modalService.dismissAll(); // Cierra el modal
-          this.conteoAEliminar = null;    // Limpia la variable
-          this.refresh$.next();           // Recarga la tabla
+          this.modalService.dismissAll();
+          this.conteoAEliminar = null;    
+          this.refresh$.next();           
           this.mostrarAlerta('Conteo eliminado correctamente.', 'exito');
         },
         error: (err) => {
@@ -172,13 +196,10 @@ export class Stock implements OnInit {
     this.isEditMode = true;
     this.idConteoEditando = count.id;
 
-    // 1. Cargamos datos básicos al formulario (si aplica)
     this.conteoForm.patchValue({
       idUsuario: count.usuario?.idUsuario || this.obtenerIdUsuarioLogueado(),
-      // Si tienes otros campos en el form, ponlos aquí
     });
 
-    // 2. Precargamos el "carrito" de insumos
     if (count.csinsumosList) {
       this.insumosContados = count.csinsumosList.map(item => ({
         idInsumo: Number(item.insumo.id),
@@ -187,7 +208,6 @@ export class Stock implements OnInit {
       }));
     }
 
-    // 3. Precargamos el "carrito" de productos 
     if (count.csproductosList) {
       this.productosContados = count.csproductosList.map(item => ({
         idProducto: Number(item.producto.id),
@@ -196,10 +216,8 @@ export class Stock implements OnInit {
       }));
     }
 
-    // 4. Abrimos el mismo modal
     this.modalService.open(content, { size: 'lg', centered: true, backdrop: 'static' });
   }
-
 
   // --- LÓGICA PRODUCTOS ---
   agregarProducto() {
@@ -258,12 +276,7 @@ export class Stock implements OnInit {
       }))
     };
 
-    //Muestro el payload en consola para depuración
-    console.log("Payload a enviar:", JSON.stringify(payload, null, 2));
-
-    //Preguntamos si es edicion o creacion
     if (this.isEditMode && this.idConteoEditando) {
-      // Si estamos editando, llamamos a UPDATE
       this.stockService.update(this.idConteoEditando, payload).subscribe({
         next: () => {
           this.closeModal();
@@ -276,7 +289,6 @@ export class Stock implements OnInit {
         }
       });
     } else {
-      // Si es nuevo, llamamos a CREATE
       this.stockService.create(payload).subscribe({
         next: () => {
           this.closeModal();
@@ -291,7 +303,6 @@ export class Stock implements OnInit {
     }
   }
 
-  // --- MODAL ---
   openModal(content: any) {
     this.limpiarForm();
     this.isEditMode = false;
@@ -311,78 +322,68 @@ export class Stock implements OnInit {
     this.tempInsumoId = null;
   }
 
-  // llamado desde el template
-  onStockFilterChange(value: string) {
-    this.stockFilterSubject.next(value ?? '');
-  }
-
   openDetailsModal(content: any, count: ConteoStock) {
     this.selectedCount = count;
     this.modalService.open(content, { centered: true, size: 'lg' });
   }
 
-  // Formatea el id con ceros a la izquierda: 1 -> 001
   formatId(id: number | undefined, width = 3): string {
     const s = (id ?? 0).toString();
     return s.padStart(width, '0');
   }
 
-  /**
-  * Convierte un precio (que puede venir como string) a un número.
-  * Es una función frágil, idealmente el backend debería enviar números.
-  */
+  // Obtiene el precio dinámico de la base de datos (incluso si la variable se llama distinto)
+  obtenerPrecioProducto(prod: any): number {
+    if (!prod) return 0;
+    return this.parsePrice(prod.precioVentaProducto || prod.precioProducto || prod.precioVenta || 0);
+  }
+
   private parsePrice(precioRaw: any): number {
     let precio = 0;
-    
     if (typeof precioRaw === 'string') {
-      // Elimina símbolos no numéricos (ej: $ , espacios) y convierte coma a punto
       const cleaned = precioRaw.replace(/[^0-9\-,.\s]/g, '').trim().replace(',', '.');
       precio = parseFloat(cleaned) || 0;
     } else {
       precio = Number(precioRaw) || 0;
     }
-    
-    // Asegura que no sea NaN (Not a Number)
     return isNaN(precio) ? 0 : precio;
   }
 
+  // ==========================================
+  // AHORA CALCULA EL TOTAL DE INSUMOS + PRODUCTOS
+  // ==========================================
   totalValue(c: ConteoStock): number {
-    // Si no hay conteo, el total es 0
-    if (!c) {
-      return 0;
-    }
+    if (!c) return 0;
 
-    // 1. Calcular total de Insumos
     const listaInsumos = c.csinsumosList || [];
     const totalInsumos = listaInsumos.reduce((acc, item) => {
-      
       const cantidad = Number(item?.cantidadStockInsumo ?? 0);
       const precio = this.parsePrice(item?.insumo?.precioCompraInsumo);
-      
       return acc + (cantidad * precio);
     }, 0);
 
-    // 2. Sumar ambos totales
-    const total = totalInsumos;
+    const listaProductos = c.csproductosList || [];
+    const totalProductos = listaProductos.reduce((acc, item) => {
+      const cantidad = Number(item?.cantidadStockProducto ?? 0);
+      const precio = this.obtenerPrecioProducto(item?.producto);
+      return acc + (cantidad * precio);
+    }, 0);
 
-    // 4. Redondear a 2 decimales
+    const total = totalInsumos + totalProductos;
     return Math.round(total * 100) / 100;
   }
 
   tieneAcceso(rolUsuario: string | null): boolean {
       if (!rolUsuario) return false;
-      const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', ''); // Lo pasa a mayúsculas y le saca el ROLE_ si lo tiene
+      const rolLimpio = rolUsuario.toUpperCase().replace('ROLE_', ''); 
       return rolLimpio === 'ADMIN' || rolLimpio === 'EMPLEADO';
   }
 
   obtenerIdUsuarioLogueado(): number {
-      // Verificamos si este código se está ejecutando en el navegador real
       if (isPlatformBrowser(this.platformId)) {
         const userId = localStorage.getItem('idUsuario');
         return userId ? Number(userId) : 2;
       }
-      
-      // Si se está ejecutando en el servidor (al hacer F5), devolvemos un ID por defecto
       return 1;
   }
 

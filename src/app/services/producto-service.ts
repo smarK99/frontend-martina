@@ -21,6 +21,13 @@ export class ProductoService {
     return this.http.post(`${this.baseUrl}/crear`, productoDTO);
   }
 
+  // ==========================================
+  // NUEVO: Método para actualizar el producto (Edición) con la imagen
+  // ==========================================
+  update(id: number, productoDTO: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/actualizar/${id}`, productoDTO);
+  }
+
   // Agregamos el método para la baja lógica
   delete(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/borrar/${id}`);

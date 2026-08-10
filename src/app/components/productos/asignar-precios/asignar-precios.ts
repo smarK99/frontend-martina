@@ -35,6 +35,7 @@ export class AsignarPrecios implements OnInit {
   // --- VARIABLES DE DATOS ---
   private refresh$ = new BehaviorSubject<void>(undefined);
   sucursales: Sucursal[] = [];
+  sucursalesFiltradas: Sucursal[] = [];
   allProductos: Producto[] = [];
   cargando = false;
 
@@ -79,6 +80,7 @@ export class AsignarPrecios implements OnInit {
     }).subscribe({
       next: (resultados) => {
         this.sucursales = resultados.sucursales;
+        this.sucursalesFiltradas = resultados.sucursales;
         this.allProductos = resultados.productos;
         this.cargando = false;
       },
@@ -238,5 +240,20 @@ export class AsignarPrecios implements OnInit {
         this.mostrarAlerta('Hubo un error al guardar los precios. Revisa la consola.', 'error');
       }
     });
+  }
+
+  // --- NUEVO: MÉTODO DE FILTRADO ---
+  filtrarSucursales(termino: string) {
+    if (!termino) {
+      this.sucursalesFiltradas = this.sucursales;
+      return;
+    }
+    
+    const q = termino.toLowerCase().trim();
+    this.sucursalesFiltradas = this.sucursales.filter(sucursal => 
+      (sucursal.id?.toString() || '').includes(q) || 
+      sucursal.nombreSucursal.toLowerCase().includes(q) ||
+      (sucursal.direccionSucursal && sucursal.direccionSucursal.toLowerCase().includes(q))
+    );
   }
 }

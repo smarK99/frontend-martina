@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { environment } from '../../environment/environment';
-import { HttpClient, HttpParams } from '@angular/common/http'; // <-- Agregamos HttpParams
+import { HttpClient, HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -53,12 +53,14 @@ export class PedidoService {
 
 
   // ==========================================
-  // NUEVO: BÚSQUEDA COMBINADA (Texto + Sucursal)
+  // MÉTODO ACTUALIZADO: BÚSQUEDA COMBINADA (Texto + Sucursal + Fecha + Estado)
   // ==========================================
-  buscarPaginadoYFiltrado(termino: string, idSucursal: number, page: number, size: number): Observable<any> {
+  buscarPaginadoYFiltrado(termino: string, idSucursal: number, fecha: string, idEstado: number, page: number, size: number): Observable<any> {
     const params = new HttpParams()
       .set('termino', termino)
       .set('idSucursal', idSucursal.toString())
+      .set('fecha', fecha)
+      .set('idEstado', idEstado.toString())
       .set('page', page.toString())
       .set('size', size.toString());
     return this.http.get<any>(`${this.baseUrl}/pedido/busqueda-paginada`, { params });

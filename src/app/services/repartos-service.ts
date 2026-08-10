@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { environment } from '../../environment/environment';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Reparto } from '../model/reparto.model';
 
 @Injectable({
@@ -22,9 +22,21 @@ export class RepartosService {
   }
 
   asignarPedidos(repartoId: number, pedidosIds: number[]): Observable<any> {
-    // Esto transforma [1, 2] en: [ { idPedido: 1 }, { idPedido: 2 } ]
     const payload = pedidosIds.map(id => ({ idPedido: id }));
     return this.http.post(`${this.baseUrl}/agregar_pedidos/${repartoId}`, payload);
+  }
+
+  // --- NUEVO MÉTODO: Paginación y Búsqueda ---
+  buscarPaginadoYFiltrado(termino: string, idRepartidor: number, fecha: string, idEstado: number, page: number, size: number): Observable<any> {
+    const params = new HttpParams()
+      .set('termino', termino)
+      .set('idRepartidor', idRepartidor.toString())
+      .set('fecha', fecha)
+      .set('idEstado', idEstado.toString()) // <-- Acá asegurate de que esté idEstado
+      .set('page', page.toString())
+      .set('size', size.toString());
+      
+    return this.http.get<any>(`${this.baseUrl}/busqueda-paginada`, { params });
   }
 
 }
