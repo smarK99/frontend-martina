@@ -69,12 +69,12 @@ export class Stock {
   // seleccionado para el modal
   selectedCount: ConteoStock | null = null;
 
-  //Variable modo edicion/creacion (De la rama de Santi)
+  //Variable modo edicion/creacion 
   isEditMode: boolean = false;
   idConteoEditando: number | null = null;
 
   constructor() {
-    // Conectamos la tabla al gatillo de refresco (Tu lógica reactiva)
+    // Conectamos la tabla al trigger de refresco 
     this.counts$ = this.refresh$.pipe(
       switchMap(() => this.stockService.getAll())
     );

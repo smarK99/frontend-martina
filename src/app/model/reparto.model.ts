@@ -11,7 +11,8 @@ export interface Rendicion {
   id?: number;
   montoRecaudado: number;
   montoRendido: number;
-  diferenciaMontos: number;
+  montoTotalReparto: number;
+  diferencia: number;
   usuario: Usuario;
   gastoList?: Gasto[] | null;
 }

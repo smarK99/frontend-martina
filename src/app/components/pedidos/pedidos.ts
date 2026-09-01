@@ -12,6 +12,7 @@ import { Sucursal } from '../../model/pedido.model';
 import { ActionBar } from '../action-bar/action-bar';
 import { ProductoService } from '../../services/producto-service';
 import { SucursalService } from '../../services/sucursal-service';
+import { MovCtaCteService } from '../../services/mov-cta-cte-service';
 
 // --- INTERFACES LOCALES ---
 interface itemCarrito {
@@ -45,6 +46,7 @@ export class Pedidos implements OnInit {
   private pedidoService = inject(PedidoService);
   private productoService = inject(ProductoService);
   private sucursalService = inject(SucursalService);
+  private MovCtaCteService = inject(MovCtaCteService);
   private auth = inject(AuthService);
   private modalService = inject(NgbModal);
   private fb = inject(FormBuilder);
@@ -76,6 +78,14 @@ export class Pedidos implements OnInit {
   selectedPedido: any | null = null;
   isLoadingDetalle: boolean = false;
 
+  // -- Historial de Movimientos de Cta Cte --
+  historialCliente: any[] = [];
+  deudaActual: number = 0;
+  sucursalSeleccionadaId: number | null = null;
+
+  // Formulario para registrar un pago manual 
+  pagoForm: FormGroup;
+  mostrandoFormularioPago = false;
 
   // ==========================================
   // 3. CONSTRUCTOR Y CICLO DE VIDA
@@ -125,6 +135,11 @@ export class Pedidos implements OnInit {
         return list.sort((a, b) => +new Date(b.fechaHoraAltaPedido) - +new Date(a.fechaHoraAltaPedido));
       })
     );
+
+    this.pagoForm = this.fb.group({
+      montoPagado: ['', [Validators.required, Validators.min(1)]],
+      concepto: ['Abono en efectivo', Validators.required]
+    });
   }
 
   ngOnInit() {
@@ -371,6 +386,94 @@ export class Pedidos implements OnInit {
     this.productosDisponibles = [];
     this.tempProductoId = null;
     this.itemsDelPedido = [];
+  }
+
+  // ==============================================
+  // 7. LÓGICA: HISTORIAL DE MOVIMIENTOS DE CTA CTE
+  // ==============================================
+
+  abrirModalHistorial(content: any) {
+    // Limpiamos estados anteriores
+    this.sucursalSeleccionadaId = null;
+    this.historialCliente = [];
+    this.deudaActual = 0;
+    this.mostrandoFormularioPago = false;
+    
+    this.modalService.open(content, { size: 'lg', centered: true, backdrop: 'static' });
+  }
+
+  // Se ejecuta cada vez que el usuario cambia el cliente en el <select>
+  alCambiarSucursal(event: any) {
+    const id = event.target.value;
+    if (!id) {
+      this.historialCliente = [];
+      return;
+    }
+    
+    this.sucursalSeleccionadaId = id;
+    this.cargarHistorial(id);
+  }
+
+  cargarHistorial(idSucursal: number) {
+    this.MovCtaCteService.obtenerHistorialPorSucursal(idSucursal).subscribe({
+      next: (data) => {
+        this.historialCliente = data;
+        // Como viene ordenado DESC desde SQL, el primer elemento (índice 0) tiene el saldo más reciente
+        if (data && data.length > 0) {
+          this.deudaActual = data[0].saldoRestante;
+        } else {
+          this.deudaActual = 0;
+        }
+      },
+      error: (err) => console.error('Error al cargar historial', err)
+    });
+  }
+
+  registrarPagoManual() {
+    if (this.pagoForm.invalid || !this.sucursalSeleccionadaId) return;
+
+    // Armamos el payload con formato exacto para el Backend (Escenario B)
+    const payload = {
+      concepto: this.pagoForm.value.concepto,
+      importePedido: 0, // No hay pedido nuevo, solo está pagando
+      montoPagado: this.pagoForm.value.montoPagado,
+      sucursal: { id: this.sucursalSeleccionadaId } // Referencia para el Backend
+    };
+
+    this.MovCtaCteService.registrarMovimiento(payload).subscribe({
+      next: () => {
+        // Refrescamos la tabla localmente para que aparezca la nueva fila
+        this.cargarHistorial(this.sucursalSeleccionadaId!);
+        this.mostrandoFormularioPago = false;
+        this.pagoForm.reset({ concepto: 'Abono en efectivo' });
+        setTimeout(() => alert('Pago registrado correctamente.'), 100);
+      },
+      error: (err) => alert('Error al registrar el pago: ' + err.message)
+    });
+  }
+
+  // ==============================================
+  // 8. LÓGICA: CANCELAR PEDIDO
+  // ==============================================
+  cancelarPedido(pedido: any) {
+    const mensaje = `¿Estás seguro de que deseas cancelar el pedido #${pedido.id}? \nEsto anulará la deuda en la cuenta corriente del cliente.`;
+    
+    if (confirm(mensaje)) {
+      this.pedidoService.cancelarPedido(pedido.id).subscribe({
+        next: () => {
+          // Cambiamos el estado localmente para no tener que recargar la página
+          // Asegúrate de poner el nombre exacto que tiene el estado cancelado en tu base de datos
+          if (pedido.estadoPedido) {
+            pedido.estadoPedido.nombreEstadoPedido = 'CANCELADO';
+          }
+          setTimeout(() => alert("Pedido cancelado exitosamente."), 100);
+        },
+        error: (err) => {
+          console.error("Error al cancelar:", err);
+          alert("Error: No se pudo cancelar el pedido.");
+        }
+      });
+    }
   }
 
 }

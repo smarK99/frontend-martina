@@ -28,4 +28,8 @@ export class PedidoService {
     return this.http.get(`${this.baseUrl}/pedido/disponibles_reparto`);
   }
 
+  cancelarPedido(idPedido: number): Observable<any> {
+    return this.http.put(`${this.baseUrl}/pedido/cancelar/${idPedido}`, {});
+  }
+
 }

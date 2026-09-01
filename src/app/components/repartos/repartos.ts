@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; 
 import { RepartosService } from '../../services/repartos-service';
@@ -8,12 +8,7 @@ import { AuthService } from '../../services/auth-service';
 import { Reparto } from '../../model/reparto.model';
 import { ActionBar } from '../action-bar/action-bar';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-
-// --- INTERFACE PARA USUARIO SIMULADO (FAKE LOGIN) ---
-interface UsuarioAutenticado {
-  id: number;
-  nombre: string;
-}
+import { PLATFORM_ID } from '@angular/core';
 
 @Component({
   selector: 'app-repartos',
@@ -30,11 +25,13 @@ export class Repartos implements OnInit {
   private modalService = inject(NgbModal);
   private auth = inject(AuthService);
   private fb = inject(FormBuilder);
+  private platformId = inject(PLATFORM_ID);
 
   // ==========================================
   // 2. VARIABLES DE ESTADO Y OBSERVABLES
   // ==========================================
   role$ = this.auth.role$;
+  usuarioLogueadoId = this.obtenerIdUsuarioLogueado();
 
   // Gatillo para recargar la tabla automáticamente
   private refresh$ = new BehaviorSubject<void>(undefined);
@@ -45,24 +42,29 @@ export class Repartos implements OnInit {
   private filterSubject = new BehaviorSubject<string>('');
   filter$ = this.filterSubject.asObservable();
 
-  // demo: id del cliente "loggeado" y repartidor loggeado
-  private CURRENT_CLIENT_ID = 1;
-  private CURRENT_REPARTIDOR_ID = 2;
-
   // seleccionado para el modal de "Ver"
   selectedReparto: Reparto | null = null;
 
-  // Info simulada del chofer logueado para el alta
-  driverInfo: UsuarioAutenticado | null = null;
-
   // Modal de alta de reparto
   repartoForm: FormGroup;
+
+  //Variable para modal gasto
+  gastoForm: FormGroup;
+  repartoSeleccionadoId: number | null = null;
+
+  //Variable para modal rendicion
+  rendicionForm: FormGroup;
 
   // --- VARIABLES PARA ASIGNACIÓN DE PEDIDO A REPARTO ---
   pedidosDisponibles: any[] = []; 
   pedidosSeleccionados: Set<number> = new Set<number>();
   repartoActivoId: number | null = null;
   cargandoPedidos = false;
+
+  // Importamos Validators si no los tienes
+  // En tu constructor o OnInit:
+  cobroForm: FormGroup;
+  pedidoParaCobrar: any = null; // Guarda temporalmente el pedido que el repartidor clickeó
 
   // ==========================================
   // 3. CONSTRUCTOR Y CICLO DE VIDA
@@ -79,7 +81,6 @@ export class Repartos implements OnInit {
       switchMap(() => this.repartosService.getAll())
     );
 
-    // Tu lógica original de filtrado por roles (INTACTA Y SEGURA)
     this.visibleRepartos$ = combineLatest([this.repartos$, this.role$, this.filter$]).pipe(
       map(([repartos, role, filter]) => {
         const q = (filter || '').trim().toLowerCase();
@@ -93,7 +94,7 @@ export class Repartos implements OnInit {
           list = repartos.slice();
         } else if (role === 'ROLE_REPARTIDOR') {
           // El repartidor ve exclusivamente los suyos
-          list = repartos.filter(r => r.usuario.idUsuario === this.CURRENT_REPARTIDOR_ID);
+          list = repartos.filter(r => r.usuario.idUsuario === this.usuarioLogueadoId);
         } else {
           // Cualquier otro rol (como ROLE_CLIENTE o ROLE_STOCK) no ve nada acá
           return [];
@@ -112,11 +113,26 @@ export class Repartos implements OnInit {
         return list.sort((a, b) => +new Date(b.fechaHoraInicioReparto) - +new Date(a.fechaHoraInicioReparto));
       })
     );
+
+    // Inicializamos el formulario de gastos con validaciones
+    this.gastoForm = this.fb.group({
+      nombreGasto: ['', [Validators.required, Validators.maxLength(100)]],
+      montoGasto: ['', [Validators.required, Validators.min(1)]] // Mínimo $1
+    });
+
+    // Inicializamos el formulario de rendición
+    this.rendicionForm = this.fb.group({
+      montoRendido: ['', [Validators.required, Validators.min(0)]]
+    });
+
+    this.cobroForm = this.fb.group({
+      montoEfectivo: [0, [Validators.min(0)]],
+      montoTransferencia: [0, [Validators.min(0)]]
+    });
   }
 
   ngOnInit() {
-    // Simulamos la sesión usando tu variable CURRENT_REPARTIDOR_ID
-    this.driverInfo = { id: this.CURRENT_REPARTIDOR_ID, nombre: 'Santiago Marquez (Simulado)' };
+    
   }
 
   // ==========================================
@@ -148,10 +164,10 @@ export class Repartos implements OnInit {
   }
 
   guardarReparto() {
-    if (this.repartoForm.valid && this.driverInfo) {
+    if (this.repartoForm.valid && this.usuarioLogueadoId) {
       
       const payload = {
-        idUsuario: this.driverInfo.id,
+        idUsuario: this.usuarioLogueadoId,
         nombreReparto: this.repartoForm.value.nombre,
         descripcionReparto: this.repartoForm.value.descripcion || ''
       };
@@ -258,4 +274,189 @@ export class Repartos implements OnInit {
   totalPedido(p: any): number {
     return p.importeTotalPedido ?? 0;
   }
+
+  // --- LÓGICA DEL C.U. CARGAR GASTO ---
+  
+  abrirModalGasto(content: any, idReparto: number | null) {
+    this.repartoSeleccionadoId = idReparto;
+    this.gastoForm.reset(); // Limpiamos campos viejos
+    this.modalService.open(content, { centered: true, backdrop: 'static' });
+  }
+
+  guardarGasto() {
+    // 1. Verificamos que el formulario sea válido
+    if (this.gastoForm.invalid) {
+      this.gastoForm.markAllAsTouched();
+      return;
+    }
+
+    // 2. Armamos el DTO exactamente como lo espera Java (CargarGastoDTO)
+    const payload = {
+      idReparto: this.repartoSeleccionadoId,
+      nombreGasto: this.gastoForm.value.nombreGasto,
+      montoGasto: this.gastoForm.value.montoGasto
+    };
+
+    console.log("Enviando Gasto:", payload);
+
+    // 3. Enviamos al backend
+    this.repartosService.cargarGasto(payload).subscribe({
+      next: (res) => {
+        alert("Gasto cargado exitosamente.");
+        this.modalService.dismissAll();
+        this.refresh$.next(); // Refrescamos la tabla para ver cambios
+      },
+      error: (err) => {
+        console.error("Error al cargar gasto:", err);
+        alert("Hubo un error al cargar el gasto: " + (err.error?.error || err.message));
+      }
+    });
+  }
+
+  //Modificaciones para el modal de gasto
+  formatId(id: number | null): string {
+    if (!id) return '';
+    return id.toString().padStart(3, '0');
+  }
+
+  // --- LÓGICA C.U. "ENTREGAR PEDIDO" ---
+
+  entregarPedido() {
+    if (this.cobroForm.invalid || !this.pedidoParaCobrar) return;
+
+    const payload = {
+      idReparto: this.selectedReparto?.id,
+      idPedido: this.pedidoParaCobrar.id,
+      montoEfectivo: this.cobroForm.value.montoEfectivo,
+      montoTransferencia: this.cobroForm.value.montoTransferencia
+    };
+
+    this.repartosService.entregarPedido(payload).subscribe({
+      next: () => {
+        this.refresh$.next(); // Actualiza tabla
+        
+        // Actualización optimista local
+        const pedidoLocal = this.selectedReparto?.pedidosList.find((p: any) => p.id === payload.idPedido);
+        if (pedidoLocal) pedidoLocal.estadoPedido.nombreEstadoPedido = 'ENTREGADO';
+        
+        this.modalService.dismissAll();
+        setTimeout(() => alert("¡Pedido entregado con éxito!"), 300);
+      },
+      error: (err) => alert("Error al registrar la entrega.")
+    });
+  }
+
+  // entregarPedido(pedidoId: number, repartoId: number, metodoPago: 'EFECTIVO' | 'TRANSFERENCIA') {
+  //   const payload = { idPedido: pedidoId, idReparto: repartoId, metodoPago };
+  //   console.log("Enviando entrega de pedido:", payload);
+  //   this.repartosService.entregarPedido(payload).subscribe({
+  //     next: () => {
+  //       this.refresh$.next();
+  //       setTimeout(() => alert("¡Pedido entregado con éxito!"), 300);
+
+  //       //Actualizacion automatica del estado del pedido en memoria para no tener que recargar la tabla
+  //       if (this.selectedReparto && this.selectedReparto.pedidosList) {
+  //         // Buscamos el pedido específico que acabamos de entregar
+  //         const pedidoLocal = this.selectedReparto.pedidosList.find((p: any) => p.id === pedidoId);
+  //         if (pedidoLocal) {
+  //           // Cambiamos su estado en memoria. 
+  //           pedidoLocal.estadoPedido.nombreEstadoPedido = 'ENTREGADO';
+  //         }
+      
+  //       }
+  //     },
+  //     error: (err) => {
+  //       console.error("Error al entregar pedido:", err);
+  //       alert("Hubo un error al entregar el pedido.");
+  //     }
+  //   });
+  // }
+
+  // Abre el modal pasándole los datos del pedido
+  abrirModalCobro(content: any, pedido: any) {
+    this.pedidoParaCobrar = pedido;
+    
+    // Pre-llenamos el input de efectivo con el total del pedido por defecto 
+    // (Asumiendo que el 90% de las veces pagan exacto en efectivo).
+    this.cobroForm.reset({
+      montoEfectivo: pedido.importeTotalPedido,
+      montoTransferencia: 0
+    });
+    
+    this.modalService.open(content, { centered: true });
+  }
+
+  // --- LÓGICA PARA FINALIZAR REPARTO ---
+  finalizarReparto(repartoId: number) {
+
+    if (this.tienePedidosPendientes(this.selectedReparto)) {
+      alert("Entrega los pedidos pendientes!");
+      return;
+    }
+
+    this.repartosService.finalizarReparto(repartoId).subscribe({
+      next: () => {
+        
+        this.refresh$.next();
+        setTimeout(() => alert("¡Reparto finalizado con éxito!"), 300);
+
+        if (this.selectedReparto && this.selectedReparto.estadoReparto) {
+          this.selectedReparto.estadoReparto.nombreEstadoReparto = 'FINALIZADO';
+        }
+      },
+      error: (err) => {
+        alert("Hubo un error al finalizar el reparto.");
+      }
+    });
+  }
+
+  tienePedidosPendientes(reparto: any): boolean {
+    if (!reparto || !reparto.pedidosList) return false;
+    
+    // El método .some() frena y devuelve true apenas encuentra uno que cumpla la condición
+    return reparto.pedidosList.some((p: any) => p.estadoPedido.nombreEstadoPedido !== 'ENTREGADO');
+  }
+
+  // --- LÓGICA C.U. REALIZAR RENDICIÓN ---
+  realizarRendicion(idReparto: number) {
+    if (this.rendicionForm.invalid) {
+      this.rendicionForm.markAllAsTouched();
+      return;
+    }
+
+    const payload = {
+      idReparto: idReparto,
+      montoRendido: this.rendicionForm.value.montoRendido
+    };
+
+    if (confirm('¿Confirmas que el monto contado es correcto? Esta acción cerrará la caja del reparto.')) {
+      this.repartosService.realizarRendicion(payload).subscribe({
+        next: (rendicionActualizada) => {
+          this.refresh$.next();
+        
+          if (this.selectedReparto) {
+            this.selectedReparto.rendicion = rendicionActualizada;
+          }
+          
+          setTimeout(() => alert("Caja rendida exitosamente."), 300);
+        },
+        error: (err) => {
+          console.error("Error al rendir caja:", err);
+          alert("Error: " + (err.error?.error || "No se pudo realizar la rendición"));
+        }
+      });
+    }
+  }
+
+  obtenerIdUsuarioLogueado(): number {
+    // Verificamos si este código se está ejecutando en el navegador real
+    if (isPlatformBrowser(this.platformId)) {
+      const userId = localStorage.getItem('idUsuario');
+      return userId ? Number(userId) : 2;
+    }
+    
+    // Si se está ejecutando en el servidor (al hacer F5), devolvemos un ID por defecto
+    return 1;
+  }
+
 }

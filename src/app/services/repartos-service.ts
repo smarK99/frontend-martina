@@ -22,9 +22,24 @@ export class RepartosService {
   }
 
   asignarPedidos(repartoId: number, pedidosIds: number[]): Observable<any> {
-    // Esto transforma [1, 2] en: [ { idPedido: 1 }, { idPedido: 2 } ]
     const payload = pedidosIds.map(id => ({ idPedido: id }));
     return this.http.post(`${this.baseUrl}/agregar_pedidos/${repartoId}`, payload);
+  }
+
+  cargarGasto(gastoDTO: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/cargar_gasto`, gastoDTO);
+  }
+
+  entregarPedido(entregaDTO: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/entregar_pedido`, entregaDTO);
+  }
+
+  finalizarReparto(repartoId: number): Observable<any> {
+    return this.http.put(`${this.baseUrl}/finalizar/${repartoId}`, {});
+  }
+
+  realizarRendicion(rendicionDTO: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/realizar_rendicion`, rendicionDTO);
   }
 
 }
