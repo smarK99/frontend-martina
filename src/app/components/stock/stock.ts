@@ -54,6 +54,11 @@ export class Stock implements OnInit {
   private stockFilterSubject = new BehaviorSubject<string>('');
   private dateFilterSubject = new BehaviorSubject<string>('');
 
+  // Observables
+  counts$!: Observable<ConteoStock[]>;
+  visibleCounts$!: Observable<ConteoStock[]>;
+  stockFilter$ = this.stockFilterSubject.asObservable();
+
   // Formulario y Listas
   conteoForm: FormGroup;
   productosDisponibles: any[] = [];
