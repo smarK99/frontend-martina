@@ -2,27 +2,65 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
-import { AuthService } from '../services/auth-service'; // Ajustá la ruta si varía
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap'; 
+
+import { AuthService } from '../services/auth-service'; 
+import { SessionExpiredComponent } from '../components/auth/session-expired.component'; 
+
+let isSessionModalOpen = false;
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const authService = inject(AuthService);
+  const modalService = inject(NgbModal); 
+
+  const manejarSesionExpirada = () => {
+    // 1. Si el modal ya está abierto, evitamos que parpadee o se duplique
+    if (isSessionModalOpen) {
+      return;
+    }
+
+    // 2. EL BLINDAJE: Si el usuario apretó "Logout" manualmente, la app ya borró los tokens.
+    // Verificamos si en ESTE momento existe algún token local.
+    // (Nota: si usás otro nombre en localStorage distinto a 'token', cambialo acá)
+    const tieneTokenGuardado = localStorage.getItem('token') !== null || authService.getRefreshToken() !== null;
+    
+    // Si ya no hay tokens en el sistema, significa que este error 401 es un fantasma. Lo ignoramos.
+    if (!tieneTokenGuardado) {
+      return;
+    }
+
+    isSessionModalOpen = true;
+    
+    authService.logout(); 
+    modalService.dismissAll(); 
+
+    const modalRef = modalService.open(SessionExpiredComponent, {
+      backdrop: 'static',
+      keyboard: false,
+      centered: true
+    });
+
+    modalRef.result.finally(() => {
+      isSessionModalOpen = false;
+      router.navigate(['/login']);
+    });
+  };
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       
-      // Si el backend nos rechazó con un 401 (Token expirado/inválido)
       if (error.status === 401) {
         const refreshToken = authService.getRefreshToken();
-
-        // Evitamos entrar en un bucle infinito si el error 401 vino del propio endpoint de login o refresh
-        const isAuthRequest = req.url.includes('/api/auth/login') || req.url.includes('/api/auth/refresh');
+        
+        // 3. EXCEPCIÓN: Ignoramos los errores 401 si vienen de peticiones de login, refresh o logout
+        const isAuthRequest = req.url.includes('/api/auth/login') || 
+                              req.url.includes('/api/auth/refresh') ||
+                              req.url.includes('/logout'); // Evita conflicto si el backend tiene ruta de logout
 
         if (refreshToken && !isAuthRequest) {
-          // Intentamos renovar el Access Token en silencio
           return authService.refreshToken().pipe(
             switchMap((newTokenData) => {
-              // Renovación exitosa: Reintentamos la petición original con el nuevo Token
               const newAuthReq = req.clone({
                 setHeaders: {
                   Authorization: `Bearer ${newTokenData.token}`
@@ -31,23 +69,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
               return next(newAuthReq);
             }),
             catchError((refreshErr) => {
-              // El Refresh Token también expiró (o es inválido): Cerramos sesión
-              authService.logout();
-              alert('Tu sesión ha expirado por completo. Por favor, volvé a iniciar sesión.');
-              router.navigate(['/login']);
+              manejarSesionExpirada();
               return throwError(() => refreshErr);
             })
           );
         } else if (!isAuthRequest) {
-          // No había Refresh Token: sesión expirada directa
-          authService.logout();
-          router.navigate(['/login']);
+          manejarSesionExpirada();
         }
       }
 
-      // Si es un 403 (Sin permisos suficientes para esa función)
       if (error.status === 403) {
-        alert('No tenés permisos para realizar esta acción.');
+        alert('No tenés permisos para realizar esta acción.'); 
       }
 
       return throwError(() => error);

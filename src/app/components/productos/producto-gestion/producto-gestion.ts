@@ -1,13 +1,14 @@
-import { Component, inject, TemplateRef, ViewChild } from '@angular/core';
+import { Component, inject, TemplateRef, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ProductoService } from '../../../services/producto-service';
-import { BehaviorSubject, Observable, switchMap } from 'rxjs';
-import { Producto } from '../../../model/producto.model';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { BehaviorSubject, switchMap } from 'rxjs';
+
+import { ProductoService } from '../../../services/producto-service';
 import { CategoriaService } from '../../../services/categoria-service';
 import { InsumosService } from '../../../services/insumos-service';
-import { AuthService } from '../../../services/auth-service'; // <-- Importamos la seguridad
+import { AuthService } from '../../../services/auth-service'; 
+import { Producto } from '../../../model/producto.model';
 
 interface ItemInsumoReceta {
   insumoId: number;
@@ -21,62 +22,117 @@ interface ItemInsumoReceta {
   templateUrl: './producto-gestion.html',
   styleUrl: './producto-gestion.css'
 })
-export class ProductoGestion {
+export class ProductoGestion implements OnInit {
   
-  // --- INYECCIONES DE SERVICIOS ---
   private categoriaService = inject(CategoriaService);
   private insumoService = inject(InsumosService);
-  private authService = inject(AuthService); // <-- Inyectamos el patovica
+  private authService = inject(AuthService); 
+  private productoService = inject(ProductoService);
+  private fb = inject(FormBuilder);
+  private modalService = inject(NgbModal);
 
-  // Exponemos el rol para que el HTML pueda leerlo
   role$ = this.authService.role$;
 
   @ViewChild('altaProductoModal') modalAltaProducto!: TemplateRef<any>;
 
-  productos: Producto[] = [];
+  productosOriginales: Producto[] = [];
+  productosFiltrados: Producto[] = [];
   insumosDisponibles: any[] = [];
   categoriasDisponibles: any[] = [];
   insumosDelProducto: ItemInsumoReceta[] = [];
 
+  filtroCategoria: string | number = 'TODAS';
+  filtroTexto: string = '';
+
   tempInsumoId: number | null = null;
   tempCantidadInsumo: number = 1;
 
-  isModalOpen = false;
   productoForm: FormGroup;
-
   private refresh$ = new BehaviorSubject<void>(undefined);
-  productos$!: Observable<any[]>;
 
-  constructor(private productoService: ProductoService, private fb: FormBuilder, private modalService: NgbModal) {
+  productoABajar: number | null = null;
+  @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' = 'exito';
+
+  isEditMode = false;
+  productoSeleccionadoId: number | null = null;
+  imagenBase64: string | null = null; 
+  productoSeleccionadoDetalle: any = null; 
+
+  constructor() {
     this.productoForm = this.fb.group({
       nombre: ['', Validators.required],
       descripcion: [''],
+      preparacion: [''], // <-- Campo para las instrucciones internas
       categoria: ['', Validators.required]
     });
   }
 
   ngOnInit() {
     this.loadData();
-    this.productos$ = this.refresh$.pipe(
+    
+    this.refresh$.pipe(
       switchMap(() => this.productoService.getAll())
-    );
+    ).subscribe({
+      next: (data) => {
+        this.productosOriginales = data;
+        this.aplicarFiltrosCombinados();
+      },
+      error: (err) => console.error('Error al cargar productos:', err)
+    });
   }
 
   loadData(): void {
-    this.categoriaService.getAll().subscribe(data => { this.categoriasDisponibles = data })
+    this.categoriaService.getAll().subscribe(data => { this.categoriasDisponibles = data });
     this.insumoService.getAll().subscribe(data => { this.insumosDisponibles = data });
   }
 
-  // --- MODAL LÓGICA ---
+  aplicarFiltrosCombinados() {
+    let temp = this.productosOriginales;
+
+    if (this.filtroCategoria !== 'TODAS') {
+      temp = temp.filter(p => p.categoria?.id == this.filtroCategoria);
+    }
+
+    if (this.filtroTexto) {
+      const q = this.filtroTexto.toLowerCase().trim();
+      temp = temp.filter(p =>
+        (p.id?.toString() || '').includes(q) ||
+        (p.nombreProducto || '').toLowerCase().includes(q) ||
+        (p.descripcionProducto || '').toLowerCase().includes(q)
+      );
+    }
+
+    this.productosFiltrados = temp;
+  }
+
+  onFiltrarCategoria(event: any) {
+    this.filtroCategoria = event.target.value;
+    this.aplicarFiltrosCombinados();
+  }
+
+  onBuscarTexto(termino: string) {
+    this.filtroTexto = termino;
+    this.aplicarFiltrosCombinados();
+  }
+
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+    if (tipo === 'exito') {
+      setTimeout(() => { this.modalService.dismissAll(); }, 2000);
+    }
+  }
+
   agregarInsumo() {
     if (!this.tempInsumoId || this.tempCantidadInsumo <= 0) return;
 
-    // Buscamos el insumo completo (asumiendo que tu ID se llama codInsumo o id)
     const insumoSeleccionado = this.insumosDisponibles.find(i => i.codInsumo == this.tempInsumoId || i.id == this.tempInsumoId);
 
     if (insumoSeleccionado) {
-      // Verificamos si ya está en la lista para sumar cantidad en lugar de duplicar
-      const existente = this.insumosDelProducto.find(item => item.insumoId === insumoSeleccionado.codInsumo);
+      const existente = this.insumosDelProducto.find(item => item.insumoId === (insumoSeleccionado.codInsumo || insumoSeleccionado.id));
 
       if (existente) {
         existente.cantidad += this.tempCantidadInsumo;
@@ -88,7 +144,6 @@ export class ProductoGestion {
         });
       }
 
-      // Reseteamos los inputs
       this.tempInsumoId = null;
       this.tempCantidadInsumo = 1;
     }
@@ -98,108 +153,156 @@ export class ProductoGestion {
     this.insumosDelProducto.splice(index, 1);
   }
 
-  // 3. RECIBIR EL TEMPLATE Y ABRIRLO CON EL SERVICIO
-  abrirModalAltaProducto() {
-    const modalRef = this.modalService.open(this.modalAltaProducto, { size: 'lg', centered: true });
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.imagenBase64 = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
 
-    modalRef.result.then(
-      (result) => { this.limpiarFormularioAlta(); }, // Se cierra correctamente
-      (reason) => { this.limpiarFormularioAlta(); }  // Se descarta (clic afuera, ESC)
+  abrirModalAltaProducto() {
+    this.isEditMode = false;
+    this.productoSeleccionadoId = null;
+    this.limpiarFormularioAlta();
+    
+    this.modalService.open(this.modalAltaProducto, { size: 'lg', centered: true }).result.then(
+      () => { this.limpiarFormularioAlta(); }, 
+      () => { this.limpiarFormularioAlta(); }  
     );
   }
 
-  // 4. USAR EL SERVICIO PARA CERRAR TODO
-  closeModal() {
-    this.modalService.dismissAll(); // Cierra los modales activos
-    this.productoForm.reset(); // Limpia el formulario
+  abrirModalEdicion(modalTemplate: any, producto: any) {
+    this.isEditMode = true;
+    this.productoSeleccionadoId = producto.id;
+    this.imagenBase64 = producto.imagenProducto || null;
+
+    this.productoForm.patchValue({
+      nombre: producto.nombreProducto,
+      descripcion: producto.descripcionProducto,
+      preparacion: producto.recetaPreparacion || '', // <-- Carga las instrucciones
+      categoria: producto.categoria?.id || ''
+    });
+
+    if (producto.productoInsumoList) {
+      this.insumosDelProducto = producto.productoInsumoList.map((pi: any) => ({
+        insumoId: pi.insumo?.id,
+        nombreInsumo: pi.insumo?.nombreInsumo,
+        cantidad: pi.cantidadInsumo
+      }));
+    } else {
+      this.insumosDelProducto = [];
+    }
+
+    this.modalService.open(modalTemplate, { size: 'lg', centered: true }).result.then(
+      () => { this.limpiarFormularioAlta(); }, 
+      () => { this.limpiarFormularioAlta(); }  
+    );
   }
 
-  // Se encarga de vaciar absolutamente todo
+  abrirModalDetalles(modalTemplate: any, producto: any) {
+    this.productoSeleccionadoDetalle = producto;
+    this.modalService.open(modalTemplate, { size: 'md', centered: true });
+  }
+
+  closeModal() {
+    this.modalService.dismissAll(); 
+    this.limpiarFormularioAlta();
+  }
+
   private limpiarFormularioAlta() {
-    // 1. Resetea los campos de texto y selects del FormGroup
-    this.productoForm.reset({
-      nombre: '',
-      categoria: '',
-      descripcion: ''
-    });
-    
-    // 2. Vacia la tabla de la receta
+    this.productoForm.reset({ nombre: '', categoria: '', descripcion: '', preparacion: '' });
     this.insumosDelProducto = [];
-    
-    // 3. Vacia los campos temporales de selección de insumo
     this.tempInsumoId = null;
     this.tempCantidadInsumo = 1;
+    this.imagenBase64 = null;
   }
 
   guardarProducto() {
-    // 1. Verificamos que los campos obligatorios del form estén llenos
     if (this.productoForm.valid) {
-      // 2. Armamos el DTO
       const payload = {
         nombreProducto: this.productoForm.value.nombre,
         descripcionProducto: this.productoForm.value.descripcion || '',
+        recetaPreparacion: this.productoForm.value.preparacion || '', // <-- Envía las instrucciones
+        imagenProducto: this.imagenBase64,
         idCategoria: Number(this.productoForm.value.categoria),
-
-        // Mapeamos el arreglo de insumos a la estructura del backend
         apiList: this.insumosDelProducto.map(item => ({
           idInsumo: item.insumoId,
           cantidadI: item.cantidad
         }))
       };
 
-      console.log('Enviando DTO de Producto al Backend:', payload);
-
-      // 3. Enviamos al backend
-      this.productoService.create(payload).subscribe({
-        next: (respuesta) => {
-          console.log('Producto creado exitosamente:', respuesta);
-
-          // 4. Cerramos el modal (esto disparará la limpieza)
-          this.closeModal();
-
-          //Recargar la tabla de productos para que aparezca el nuevo producto sin necesidad de recargar la página
-          this.refresh$.next();
-
-          // 5. Alert con pequeño retraso para no bloquear la animación de cierre
-          setTimeout(() => {
-            alert('¡Producto creado con éxito!');
-          }, 300);
-
-          
-        },
-        error: (err) => {
-          console.error('Error al intentar crear el producto:', err);
-          alert('Hubo un error al guardar el producto. Revisa la consola para más detalles.');
-        }
-      });
+      if (this.isEditMode && this.productoSeleccionadoId) {
+        this.productoService.update(this.productoSeleccionadoId, payload).subscribe({
+          next: () => {
+            this.closeModal();
+            this.refresh$.next();
+            setTimeout(() => this.mostrarAlerta('¡Producto actualizado con éxito!', 'exito'), 300);
+          },
+          error: (err) => {
+            console.error(err);
+            this.mostrarAlerta('Hubo un error al actualizar el producto.', 'error');
+          }
+        });
+      } else {
+        this.productoService.create(payload).subscribe({
+          next: () => {
+            this.closeModal();
+            this.refresh$.next();
+            setTimeout(() => this.mostrarAlerta('¡Producto creado con éxito!', 'exito'), 300);
+          },
+          error: (err) => {
+            console.error(err);
+            this.mostrarAlerta('Hubo un error al guardar el producto.', 'error');
+          }
+        });
+      }
 
     } else {
-      // Si el form es inválido, marcamos todo para que los inputs se pongan en rojo
       this.productoForm.markAllAsTouched();
-      alert('Por favor, completa todos los campos obligatorios del formulario principal.');
+      this.mostrarAlerta('Completá los campos obligatorios del formulario.', 'error');
     }
   }
 
+  abrirModalBaja(id: number | undefined, modalTemplate: any) {
+    if (!id) return; 
+    this.productoABajar = id;
+    this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+  }
 
-  // --- HELPER PARA IMÁGENES DINÁMICAS ---
-  getImagenProducto(nombreProducto: string): string {
+  confirmarBaja() {
+    if (this.productoABajar) {
+      this.productoService.delete(this.productoABajar).subscribe({
+        next: () => {
+          this.modalService.dismissAll();
+          this.productoABajar = null;
+          this.refresh$.next(); 
+          setTimeout(() => this.mostrarAlerta('Producto eliminado exitosamente.', 'exito'), 300);
+        },
+        error: (err) => console.error(err)
+      });
+    }
+  }
+
+  getImagenReal(producto: any): string {
+    if (producto.imagenProducto && producto.imagenProducto.trim() !== '') {
+      return producto.imagenProducto;
+    }
+    return this.getImagenFalsaPorDefecto(producto.nombreProducto);
+  }
+
+  getImagenFalsaPorDefecto(nombreProducto: string): string {
     if (!nombreProducto) return '/assets/martina-logo.png';
-    
     const nombre = nombreProducto.toLowerCase();
     
-    if (nombre.includes('cocido')) {
-      return '/assets/jcocido.jpg';
-    } else if (nombre.includes('crudo')) {
-      return '/assets/jcrudo.jpg';
-    } else if (nombre.includes('salame')) {
-      return '/assets/salame-verdura.jpg';
-    } else if (nombre.includes('jyq')) {
-      return '/assets/jcocido.jpg';
-    }
+    if (nombre.includes('cocido')) return '/assets/jcocido.jpg';
+    if (nombre.includes('crudo')) return '/assets/jcrudo.jpg';
+    if (nombre.includes('salame')) return '/assets/salame-verdura.jpg';
+    if (nombre.includes('jyq')) return '/assets/jcocido.jpg';
     
-    // Fallback: Si no es ninguno de los 3, muestra el logo por defecto
     return '/assets/martina-logo.png';
   }
-
-
 }

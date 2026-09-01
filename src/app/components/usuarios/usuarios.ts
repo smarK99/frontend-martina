@@ -1,8 +1,8 @@
-import { Component, inject, OnInit, TemplateRef } from '@angular/core';
+import { Component, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal, NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { BehaviorSubject, Observable, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, switchMap, combineLatest, tap, catchError, of, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { AuthService } from '../../services/auth-service';
 import { UsuarioService } from '../../services/usuario.service';
@@ -24,9 +24,18 @@ export class Usuarios implements OnInit {
 
   role$ = this.auth.role$;
   
-  // Estado de la tabla
+  // ==========================================
+  // VARIABLES DE PAGINACIÓN Y FILTROS
+  // ==========================================
   private refresh$ = new BehaviorSubject<void>(undefined);
-  usuarios$!: Observable<any[]>;
+  filterSubject = new BehaviorSubject<string>(''); // Controla el texto del buscador
+  
+  currentPage = 0;
+  pageSize = 15;
+  totalElements = 0;
+  totalPages = 0;
+  isLoadingTabla = false;
+  usuarios: any[] = []; // Reemplazamos el Observable por un array normal para la vista
 
   // Formulario reactivo
   usuarioForm: FormGroup;
@@ -38,6 +47,15 @@ export class Usuarios implements OnInit {
   rolesSeleccionados: string[] = [];
   usuarioParaRolesId: number | null = null;
 
+  // ==========================================
+  // ALERTA GENÉRICA Y CONFIRMACIÓN DE BAJA
+  // ==========================================
+  @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' = 'exito';
+  
+  usuarioABajar: number | null = null;
+
   constructor() {
     this.usuarioForm = this.fb.group({
       nombreApellido: ['', Validators.required],
@@ -47,14 +65,68 @@ export class Usuarios implements OnInit {
       domicilioUsuario: [''],
       claveUsuario: ['', Validators.required]
     });
-
-    // Enganchamos la tabla al backend
-    this.usuarios$ = this.refresh$.pipe(
-      switchMap(() => this.usuarioService.getAll())
-    );
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.configurarPaginacionReactiva();
+  }
+
+  // ==========================================
+  // LÓGICA REACTIVA DE PAGINACIÓN Y BÚSQUEDA
+  // ==========================================
+  configurarPaginacionReactiva() {
+    combineLatest([
+      this.filterSubject.pipe(debounceTime(400), distinctUntilChanged()), // Espera a que termine de tipear
+      this.refresh$,
+      this.role$
+    ]).pipe(
+      tap(() => this.isLoadingTabla = true),
+      switchMap(([termino, _, role]) => {
+        
+        // Seguridad: Si no es admin o dueño, no traemos la lista
+        if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO') {
+          return of({ content: [], totalElements: 0, totalPages: 0 });
+        }
+
+        return this.usuarioService.buscarPaginadoYFiltrado(termino, this.currentPage, this.pageSize).pipe(
+          catchError(error => {
+            console.error('🚨 Error al traer usuarios del backend:', error);
+            return of({ content: [], totalElements: 0, totalPages: 0 });
+          })
+        );
+      })
+    ).subscribe(response => {
+      this.totalElements = response.totalElements || 0;
+      this.totalPages = response.totalPages || 0;
+      this.usuarios = response.content || []; 
+      this.isLoadingTabla = false; 
+    });
+  }
+
+  onFilterChange(value: string) {
+    this.currentPage = 0; 
+    this.filterSubject.next(value.trim()); 
+  }
+
+  cambiarPagina(nuevaPagina: number) {
+    if (nuevaPagina >= 0 && nuevaPagina < this.totalPages) {
+      this.currentPage = nuevaPagina;
+      this.refresh$.next(); 
+    }
+  }
+
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    
+    this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+
+    if (tipo === 'exito') {
+      setTimeout(() => {
+        this.modalService.dismissAll();
+      }, 2000);
+    }
+  }
 
   // --- MODALES ALTA Y EDICIÓN ---
   abrirModalAlta(modal: TemplateRef<any>) {
@@ -122,11 +194,11 @@ export class Usuarios implements OnInit {
         next: () => {
           this.closeModal();
           this.refresh$.next(); 
-          alert('Usuario actualizado con éxito.');
+          setTimeout(() => this.mostrarAlerta('Usuario actualizado con éxito.', 'exito'), 300);
         },
         error: (err) => {
           console.error(err);
-          alert('Error al actualizar el usuario.');
+          this.mostrarAlerta('Error al actualizar el usuario.', 'error');
         }
       });
       
@@ -144,28 +216,35 @@ export class Usuarios implements OnInit {
         next: () => {
           this.closeModal();
           this.refresh$.next(); 
-          alert('Usuario registrado con éxito.');
+          setTimeout(() => this.mostrarAlerta('Usuario registrado con éxito.', 'exito'), 300);
         },
         error: (err) => {
           console.error(err);
-          alert('Error al registrar el usuario.');
+          this.mostrarAlerta('Error al registrar el usuario.', 'error');
         }
       });
     }
   }
 
-  darDeBaja(codUsuario: number) {
-    if (confirm('¿Estás seguro de que querés dar de baja a este usuario? Esta acción es lógica y registrará la fecha actual.')) {
-      const payloadBaja = { codUsuario: codUsuario };
+  abrirModalBaja(codUsuario: number, modalTemplate: any) {
+    this.usuarioABajar = codUsuario;
+    this.modalService.open(modalTemplate, { centered: true, size: 'sm' });
+  }
+
+  confirmarBaja() {
+    if (this.usuarioABajar) {
+      const payloadBaja = { codUsuario: this.usuarioABajar };
       
       this.usuarioService.baja(payloadBaja).subscribe({
         next: () => {
+          this.modalService.dismissAll();
+          this.usuarioABajar = null;
           this.refresh$.next();
-          alert('El usuario fue dado de baja exitosamente.');
+          setTimeout(() => this.mostrarAlerta('El usuario fue dado de baja exitosamente.', 'exito'), 300);
         },
         error: (err) => {
           console.error(err);
-          alert('Error al dar de baja.');
+          this.mostrarAlerta('Error al dar de baja al usuario.', 'error');
         }
       });
     }
@@ -194,7 +273,6 @@ export class Usuarios implements OnInit {
     } else {
       this.rolesSeleccionados = this.rolesSeleccionados.filter(r => r !== rol);
     }
-    // Agregamos este chismoso:
     console.log("Rol clickeado:", rol, "| Estado actual de la lista:", this.rolesSeleccionados);
   }
 
@@ -205,18 +283,17 @@ export class Usuarios implements OnInit {
       roles: this.rolesSeleccionados
     };
     
-    // Agregamos este chismoso antes de mandarlo a Java:
     console.log(">>> ENVIANDO A JAVA EL PAYLOAD:", payload);
     
     this.usuarioService.actualizarRoles(payload).subscribe({
       next: () => {
         this.modalService.dismissAll();
         this.refresh$.next();
-        alert('Permisos actualizados correctamente.');
+        setTimeout(() => this.mostrarAlerta('Permisos actualizados correctamente.', 'exito'), 300);
       },
       error: (err) => {
         console.error(err);
-        alert('Error al actualizar permisos.');
+        this.mostrarAlerta('Error al actualizar permisos.', 'error');
       }
     });
   }

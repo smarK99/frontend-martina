@@ -12,20 +12,59 @@
   </button>
   }
   }
-
 </app-action-bar>
 
 <section class="py-4">
   <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    
+    <!-- CABECERA DE FILTROS REDISEÑADA -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start mb-3 gap-3">
       <h2 class="h4 mb-0">Pedidos</h2>
 
-      <div class="d-flex gap-2 align-items-center">
-        <input type="search" class="form-control form-control-sm" placeholder="Buscar por cliente, id o estado..."
-          (input)="onFilterChange($any($event.target).value)" style="min-width: 220px;" />
-        <button class="btn btn-sm btn-outline-secondary" (click)="onFilterChange('')">Buscar</button>
-      </div>
+      <div class="d-flex flex-column align-items-md-end gap-2 w-100">
+        
+        <!-- PRIMERA LÍNEA: Filtros (Estado, Fecha, Sucursal) -->
+        <div class="d-flex gap-2 flex-wrap justify-content-md-end w-100">
+          
+          <!-- SELECTOR DE ESTADO -->
+          <select class="form-select form-select-sm w-auto" (change)="onEstadoFilterChange($any($event.target).value)">
+            <option value="0">Todos los estados</option>
+            <option value="1">Creado</option>
+            <option value="2">En Preparación</option>
+            <option value="3">Listo</option>
+            <option value="4">Entregado</option>
+            <option value="5">Cancelado</option>
+          </select>
 
+          <!-- SELECTOR DE FECHA -->
+          <div class="input-group input-group-sm w-auto">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-calendar3"></i></span>
+            <input type="date" class="form-control" title="Filtrar por fecha" 
+                   (change)="onDateFilterChange($any($event.target).value)">
+          </div>
+
+          <!-- SELECTOR DE SUCURSAL -->
+          @if ((role$ | async) !== 'ROLE_CLIENTE') {
+            <select class="form-select form-select-sm w-auto" (change)="onSucursalFilterChange($event)">
+              <option value="">Todas las sucursales</option>
+              @for (sucursal of sucursales; track sucursal.id) {
+                <option [value]="sucursal.id">{{ sucursal.nombreSucursal }}</option>
+              }
+            </select>
+          }
+        </div>
+
+        <!-- SEGUNDA LÍNEA: Buscador (Independiente) -->
+        <div class="input-group input-group-sm w-100" style="max-width: 400px;">
+          <span class="input-group-text bg-white text-secondary"><i class="bi bi-search"></i></span>
+          <input type="search" class="form-control border-start-0 ps-0" placeholder="Buscar N° Pedido o Importe..." 
+                 #searchInput (input)="onFilterChange(searchInput.value)" />
+        </div>
+
+      </div>
+    </div>
+    
+    <div class="d-flex justify-content-end mb-3">
       @if (role$ | async; as role) {
       <div class="text-muted small fw-bold">
         @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
@@ -42,9 +81,11 @@
     </div>
 
     <!-- Tabla de pedidos -->
-    @if (visiblePedidos$ | async; as pedidos) {
-    @if (pedidos$ === null) {
-    <div class="alert alert-info">No hay pedidos para mostrar.</div>
+    @if (isLoadingTabla) {
+      <div class="text-center py-5">
+        <div class="spinner-border text-danger" role="status"></div>
+        <p class="text-muted mt-2">Cargando pedidos...</p>
+      </div>
     } @else {
     <div class="table-responsive">
       <table class="table table-striped align-middle">
@@ -100,15 +141,12 @@
 
 <!-- Modal Nuevo Pedido -->
 <ng-template #nuevoPedidoModal let-modal>
-
   <div class="modal-header modal-header-red text-white">
     <h5 class="modal-title fw-bold">Registrar Nuevo Pedido</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
   </div>
-
   <div class="modal-body">
     <div class="container-fluid px-0">
-
       <form [formGroup]="pedidoForm">
         <div class="row g-3">
           <div class="col-md-12">
@@ -123,7 +161,6 @@
             <div class="text-danger small mt-1">La sucursal es obligatoria.</div>
             }
           </div>
-
           <div class="col-md-12">
             <label class="form-label fw-bold">Descripción / Notas</label>
             <textarea class="form-control" formControlName="descripcion" rows="2"
@@ -133,7 +170,6 @@
       </form>
 
       <hr class="my-4 text-secondary">
-
       <h6 class="fw-bold mb-3">Detalle del Pedido (Productos)</h6>
 
       @if (productosDisponibles.length > 0) {
@@ -147,12 +183,10 @@
             }
           </select>
         </div>
-
         <div class="col-md-3">
           <label class="form-label small mb-1">Cant.</label>
           <input type="number" class="form-control form-control-sm" [(ngModel)]="tempCantidad" min="1">
         </div>
-
         <div class="col-md-3">
           <button class="btn btn-sm btn-danger w-100" (click)="agregarItem()"
             [disabled]="!tempProductoId || tempCantidad < 1">
@@ -165,6 +199,7 @@
         <i class="bi bi-info-circle me-1"></i> Por favor, seleccione una sucursal
       </div>
       }
+
       @if (itemsDelPedido.length > 0) {
       <div class="table-responsive border rounded">
         <table class="table table-sm table-hover mb-0">
@@ -206,25 +241,20 @@
         No has agregado productos al pedido aún.
       </div>
       }
-
     </div>
   </div>
-
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
-    <button type="button" class="btn bg-brand" (click)="guardarPedido()">Confirmar Pedido</button>
+    <button type="button" class="btn bg-brand text-white" (click)="guardarPedido()">Confirmar Pedido</button>
   </div>
-
 </ng-template>
 
 <!--Modal Ver detalle Pedido-->
 <ng-template #detallePedidoModal let-modal>
-
   <div class="modal-header bg-danger text-white">
     <h5 class="modal-title fw-bold">Detalle del Pedido #{{ selectedPedido?.id }}</h5>
     <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="cerrarModalDetalle()"></button>
   </div>
-
   <div class="modal-body">
     @if (isLoadingDetalle) {
     <div class="text-center py-5 text-muted">
@@ -233,7 +263,6 @@
     </div>
     }
     @else if (selectedPedido) {
-
     <div class="row mb-4 bg-light py-3 rounded border mx-1">
       <div class="col-md-6 mb-2 mb-md-0">
         <strong>Cliente:</strong> <span class="ms-2">{{ selectedPedido.sucursal.nombreSucursal }}</span><br>
@@ -243,14 +272,11 @@
         <strong>Estado:</strong>
         <span class="badge bg-secondary ms-2 fs-6">{{ selectedPedido.estadoPedido.nombreEstadoPedido }}</span><br>
         <div class="mt-2 fs-5">
-          <strong>Total:</strong> <span class="text-danger fw-bold ms-2">{{ selectedPedido.importeTotalPedido | currency
-            }}</span>
+          <strong>Total:</strong> <span class="text-danger fw-bold ms-2">{{ selectedPedido.importeTotalPedido | currency }}</span>
         </div>
       </div>
     </div>
-
     <h6 class="fw-bold mb-3 ps-1 border-bottom pb-2">Ítems del Pedido</h6>
-
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
@@ -266,11 +292,7 @@
           <tr>
             <td class="text-center fw-bold">{{ item.cantidadDetallePedido }}</td>
             <td>{{ item.producto.nombreProducto }}</td>
-
-            <td class="text-end">
-              {{ (item.subtotalDetallePedido / item.cantidadDetallePedido) | currency }}
-            </td>
-
+            <td class="text-end">{{ (item.subtotalDetallePedido / item.cantidadDetallePedido) | currency }}</td>
             <td class="text-end fw-bold pe-3">{{ item.subtotalDetallePedido | currency }}</td>
           </tr>
           }
@@ -285,7 +307,6 @@
         </tfoot>
       </table>
     </div>
-
     }
     @else {
     <div class="text-center py-5 text-danger">
@@ -293,8 +314,7 @@
     </div>
     }
   </div>
-
-  <div class="modal-footer bg-light">
+  <div class="modal-footer bg-light border-0">
     <button type="button" class="btn btn-danger" (click)="cerrarModalDetalle()">Cerrar</button>
   </div>
 

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http'; // <-- Agregamos HttpParams
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -57,7 +57,7 @@ export class UsuarioService {
     return this.http.post(`${this.apiURL}/cambiar-clave`, datos); 
   }
  
-/**
+  /**
    * Envía el email al backend para solicitar el link de recuperación de clave
    */
   solicitarRecuperacionClave(email: string): Observable<any> {
@@ -66,6 +66,18 @@ export class UsuarioService {
 
   restablecerClaveConToken(token: string, nuevaClave: string): Observable<any> {
     return this.http.post(`${this.apiURL}/reset-password`, { token, nuevaClave });
+  }
+
+  // ==========================================
+  // NUEVO: Búsqueda y Paginación
+  // ==========================================
+  buscarPaginadoYFiltrado(termino: string, page: number, size: number): Observable<any> {
+    const params = new HttpParams()
+      .set('termino', termino)
+      .set('page', page.toString())
+      .set('size', size.toString());
+    
+    return this.http.get<any>(`${this.apiURL}/busqueda-paginada`, { params });
   }
 
 }

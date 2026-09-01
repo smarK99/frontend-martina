@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { Producto } from '../model/producto.model';
 import { environment } from '../../environment/environment';
 
@@ -20,5 +19,17 @@ export class ProductoService {
   
   create(productoDTO: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/crear`, productoDTO);
+  }
+
+  // ==========================================
+  // NUEVO: Método para actualizar el producto (Edición) con la imagen
+  // ==========================================
+  update(id: number, productoDTO: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/actualizar/${id}`, productoDTO);
+  }
+
+  // Agregamos el método para la baja lógica
+  delete(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/borrar/${id}`);
   }
 }

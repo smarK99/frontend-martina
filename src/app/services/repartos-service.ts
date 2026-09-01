@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { environment } from '../../environment/environment';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Reparto } from '../model/reparto.model';
 
 @Injectable({
@@ -40,6 +40,19 @@ export class RepartosService {
 
   realizarRendicion(rendicionDTO: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/realizar_rendicion`, rendicionDTO);
+  }
+
+  // --- NUEVO MÉTODO: Paginación y Búsqueda ---
+  buscarPaginadoYFiltrado(termino: string, idRepartidor: number, fecha: string, idEstado: number, page: number, size: number): Observable<any> {
+    const params = new HttpParams()
+      .set('termino', termino)
+      .set('idRepartidor', idRepartidor.toString())
+      .set('fecha', fecha)
+      .set('idEstado', idEstado.toString()) // <-- Acá asegurate de que esté idEstado
+      .set('page', page.toString())
+      .set('size', size.toString());
+      
+    return this.http.get<any>(`${this.baseUrl}/busqueda-paginada`, { params });
   }
 
 }

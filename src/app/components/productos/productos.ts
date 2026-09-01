@@ -1,14 +1,15 @@
-import { Component, ViewChild, inject } from '@angular/core';
+import { Component, ViewChild, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs'; // <-- IMPORTAMOS SUBSCRIPTION
 import { ProductoGestion } from './producto-gestion/producto-gestion';
 import { Categorias } from './categorias/categorias';
 import { Insumos } from './insumos/insumos';
 import { ActionBar } from "../action-bar/action-bar";
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { AuthService } from '../../services/auth-service'; // <-- Importamos el motor de seguridad
-import { AsignarPrecios } from "./asignar-precios/asignar-precios"; // <-- Importamos la vista de los chicos
+import { AuthService } from '../../services/auth-service'; 
+import { AsignarPrecios } from "./asignar-precios/asignar-precios"; 
 
-type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
+type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'SUCURSALES';
 
 @Component({
   selector: 'app-productos',
@@ -17,24 +18,41 @@ type VistaActiva = 'PRODUCTOS' | 'CATEGORIAS' | 'INSUMOS' | 'PRECIOS_SUCURSAL';
   templateUrl: './productos.html',
   styleUrl: './productos.css'
 })
-export class Productos {
+export class Productos implements OnInit, OnDestroy { // <-- IMPLEMENTAMOS INTERFACES
 
-  // Inyectamos el servicio para saber quién está mirando la pantalla
   private authService = inject(AuthService);
   role$ = this.authService.role$;
+  
+  private roleSub!: Subscription; // <-- VARIABLE PARA LA SUSCRIPCIÓN
 
   @ViewChild('productosGestion') productosGestion!: ProductoGestion;
   @ViewChild('categoriasGestion') categoriasGestion!: Categorias;
   @ViewChild('insumosGestion') insumosGestion!: Insumos;
+  @ViewChild('sucursalesGestion') sucursalesGestion!: AsignarPrecios; 
   
   vistaActual: VistaActiva = 'PRODUCTOS';
+
+  ngOnInit() {
+    // Escuchamos en tiempo real si el rol cambia
+    this.roleSub = this.role$.subscribe(role => {
+      // Si se desloguea o entra con un rol sin permisos administrativos, reseteamos la vista
+      if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO') {
+        this.vistaActual = 'PRODUCTOS';
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    // Limpiamos la suscripción al destruir el componente para evitar fugas de memoria
+    this.roleSub?.unsubscribe();
+  }
 
   get tituloPantalla(): string {
     switch (this.vistaActual) {
       case 'PRODUCTOS': return 'Gestión de Productos';
       case 'CATEGORIAS': return 'Gestión de Categorías';
       case 'INSUMOS': return 'Gestión de Insumos';
-      case 'PRECIOS_SUCURSAL': return 'Precios por Sucursal';
+      case 'SUCURSALES': return 'Sucursales y Precios'; 
       default: return 'Gestión';
     }
   }
@@ -44,7 +62,7 @@ export class Productos {
       case 'PRODUCTOS': return 'Nuevo Producto';
       case 'CATEGORIAS': return 'Nueva Categoría';
       case 'INSUMOS': return 'Nuevo Insumo';
-      case 'PRECIOS_SUCURSAL': return 'Ajustar Precios';
+      case 'SUCURSALES': return 'Nueva Sucursal'; 
       default: return 'Nuevo';
     }
   }
@@ -64,10 +82,12 @@ export class Productos {
       case 'INSUMOS':
         this.insumosGestion?.abrirModalAltaInsumo();
         break;
+      case 'SUCURSALES':
+        this.sucursalesGestion?.abrirModalAlta(); 
+        break;
     }
   }
 
-  // Agregá este método en tu componente
   getImagenProducto(nombre: string): string {
     const nombreLimpio = nombre.toLowerCase();
 
@@ -75,15 +95,12 @@ export class Productos {
       return '/assets/jcrudo.jpg';
     } 
     if (nombreLimpio.includes('salame')) {
-      // Reemplazá por el nombre exacto si es distinto
       return '/assets/salame-verdura.jpg'; 
     } 
     if (nombreLimpio.includes('cocido') || nombreLimpio.includes('jyq')) {
       return '/assets/jcocido.jpg';
     }
 
-    // Si no encuentra ninguna de esas palabras, pone el logo por defecto
     return '/assets/martina-logo.png';
   }
-
 }

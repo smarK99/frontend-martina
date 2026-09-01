@@ -4,7 +4,9 @@
         
         <div class="input-group" style="width: 250px;">
             <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control" placeholder="Buscar categoría...">
+            <!-- NUEVO: Agregamos #buscarInput y el evento (input) -->
+            <input type="text" class="form-control" placeholder="Buscar categoría..." 
+                   #buscarInput (input)="filtrarCategorias(buscarInput.value)">
         </div>
     </div>
 
@@ -13,10 +15,10 @@
             <div class="spinner-border text-danger" role="status"></div>
             <div class="mt-2 text-muted">Cargando categorías...</div>
         </div>
-    } @else if (categorias.length === 0) {
+    } @else if (categoriasFiltradas.length === 0) {
         <div class="alert alert-info text-center py-4">
             <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
-            No hay categorías registradas en el sistema.
+            No se encontraron categorías que coincidan con la búsqueda.
         </div>
     } @else {
         <div class="table-responsive">
@@ -31,7 +33,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for (cat of categorias; track cat.id) {
+                    @for (cat of categoriasFiltradas; track cat.id) {
                     <tr>
                         <td class="text-muted fw-bold">#{{ cat.id }}</td>
                         <td class="fw-semibold">{{ cat.nombreCategoria }}</td>

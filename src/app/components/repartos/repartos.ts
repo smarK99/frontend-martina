@@ -1,7 +1,7 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { NgbModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Observable, BehaviorSubject, combineLatest, map, switchMap } from 'rxjs'; 
+import { Observable, BehaviorSubject, combineLatest, map, switchMap, debounceTime, distinctUntilChanged, tap, catchError, of } from 'rxjs'; 
 import { RepartosService } from '../../services/repartos-service';
 import { PedidoService } from '../../services/pedido-service';
 import { AuthService } from '../../services/auth-service';
@@ -17,9 +17,6 @@ import { PLATFORM_ID } from '@angular/core';
   styleUrl: './repartos.css'
 })
 export class Repartos implements OnInit {
-  // ==========================================
-  // 1. INYECCIÓN DE DEPENDENCIAS
-  // ==========================================
   private repartosService = inject(RepartosService);
   private pedidoService = inject(PedidoService);
   private modalService = inject(NgbModal);
@@ -27,22 +24,28 @@ export class Repartos implements OnInit {
   private fb = inject(FormBuilder);
   private platformId = inject(PLATFORM_ID);
 
-  // ==========================================
-  // 2. VARIABLES DE ESTADO Y OBSERVABLES
-  // ==========================================
   role$ = this.auth.role$;
   usuarioLogueadoId = this.obtenerIdUsuarioLogueado();
 
-  // Gatillo para recargar la tabla automáticamente
+  // --- VARIABLES DE PAGINACIÓN Y FILTROS ---
+  currentPage = 0;
+  pageSize = 15;
+  totalElements = 0;
+  totalPages = 0;
+  isLoadingTabla = false;
+  repartos: Reparto[] = []; 
+
   private refresh$ = new BehaviorSubject<void>(undefined);
   repartos$!: Observable<Reparto[]>;
   visibleRepartos$!: Observable<Reparto[]>;
-
-  // filtro reactivo
   private filterSubject = new BehaviorSubject<string>('');
   filter$ = this.filterSubject.asObservable();
+  private dateFilterSubject = new BehaviorSubject<string>('');
+  private estadoFilterSubject = new BehaviorSubject<number>(0); // <-- NUEVO: Control de estado
+  
+  private CURRENT_CLIENT_ID = 1;
+  private CURRENT_REPARTIDOR_ID = 2;
 
-  // seleccionado para el modal de "Ver"
   selectedReparto: Reparto | null = null;
 
   // Modal de alta de reparto
@@ -55,7 +58,6 @@ export class Repartos implements OnInit {
   //Variable para modal rendicion
   rendicionForm: FormGroup;
 
-  // --- VARIABLES PARA ASIGNACIÓN DE PEDIDO A REPARTO ---
   pedidosDisponibles: any[] = []; 
   pedidosSeleccionados: Set<number> = new Set<number>();
   repartoActivoId: number | null = null;
@@ -66,11 +68,11 @@ export class Repartos implements OnInit {
   cobroForm: FormGroup;
   pedidoParaCobrar: any = null; // Guarda temporalmente el pedido que el repartidor clickeó
 
-  // ==========================================
-  // 3. CONSTRUCTOR Y CICLO DE VIDA
-  // ==========================================
+  @ViewChild('alertaModal') alertaModal!: TemplateRef<any>;
+  mensajeAlerta: string = '';
+  tipoAlerta: 'exito' | 'error' = 'exito';
+
   constructor() {
-    // Definimos el formulario específico de Repartos (limpiado de campos de productos)
     this.repartoForm = this.fb.group({
       nombre: ['', Validators.required],
       descripcion: ['']
@@ -132,26 +134,96 @@ export class Repartos implements OnInit {
   }
 
   ngOnInit() {
-    
+    this.configurarPaginacionReactiva();
   }
 
   // ==========================================
-  // 4. LÓGICA DE MODALES (DETALLE Y ALTA)
+  // LÓGICA DE PAGINACIÓN REACTIVA COMBINADA
   // ==========================================
-  
-  // Modal de Detalles
+  configurarPaginacionReactiva() {
+    combineLatest([
+      this.filterSubject.pipe(debounceTime(400), distinctUntilChanged()), 
+      this.dateFilterSubject.pipe(distinctUntilChanged()),
+      this.estadoFilterSubject.pipe(distinctUntilChanged()), // <-- Escuchamos cambios de estado
+      this.refresh$,
+      this.role$
+    ]).pipe(
+      tap(() => this.isLoadingTabla = true),
+      switchMap(([termino, fecha, idEstado, _, role]) => {
+        let idRepartidorAFiltrar = 0; 
+        
+        if (role === 'ROLE_REPARTIDOR') {
+          idRepartidorAFiltrar = this.CURRENT_REPARTIDOR_ID;
+        } else if (role !== 'ROLE_ADMIN' && role !== 'ROLE_DUENIO') {
+          return of({ content: [], totalElements: 0, totalPages: 0 });
+        }
+
+        // Pasamos todos los filtros al servicio
+        return this.repartosService.buscarPaginadoYFiltrado(termino, idRepartidorAFiltrar, fecha, idEstado, this.currentPage, this.pageSize).pipe(
+          catchError(error => {
+            console.error('Error al traer repartos:', error);
+            return of({ content: [], totalElements: 0, totalPages: 0 });
+          })
+        );
+      })
+    ).subscribe(response => {
+      this.totalElements = response.totalElements;
+      this.totalPages = response.totalPages;
+      this.repartos = response.content; 
+      this.isLoadingTabla = false; 
+    });
+  }
+
+  onFilterChange(value: string) {
+    this.currentPage = 0; 
+    this.filterSubject.next(value.trim());
+  }
+
+  onDateFilterChange(dateValue: string) {
+    this.currentPage = 0; 
+    this.dateFilterSubject.next(dateValue);
+  }
+
+  // --- NUEVO: Evento para el selector de estado ---
+  onEstadoFilterChange(estadoValue: string) {
+    this.currentPage = 0;
+    this.estadoFilterSubject.next(Number(estadoValue));
+  }
+
+  cambiarPagina(nuevaPagina: number) {
+    if (nuevaPagina >= 0 && nuevaPagina < this.totalPages) {
+      this.currentPage = nuevaPagina;
+      this.refresh$.next(); 
+    }
+  }
+
+  // ==========================================
+  // ALERTA Y MODALES
+  // ==========================================
+  mostrarAlerta(mensaje: string, tipo: 'exito' | 'error') {
+    this.mensajeAlerta = mensaje;
+    this.tipoAlerta = tipo;
+    
+    const modalRef = this.modalService.open(this.alertaModal, { centered: true, size: 'sm', backdrop: 'static' });
+
+    if (tipo === 'exito') {
+      setTimeout(() => {
+        modalRef.close(); 
+      }, 2000);
+    }
+  }
+
   openDetailsModal(content: any, reparto: Reparto) {
     this.selectedReparto = reparto;
     this.modalService.open(content, { centered: true, size: 'lg' });
   }
 
-  // Modal de Alta 
   openModal(modalTemplate: any) {
     const modalRef = this.modalService.open(modalTemplate, { size: 'lg', centered: true });
 
     modalRef.result.then(
-      () => { this.limpiarFormularioAlta(); }, // Cierre exitoso
-      () => { this.limpiarFormularioAlta(); }  // Cierre por ESC o clic afuera
+      () => { this.limpiarFormularioAlta(); },
+      () => { this.limpiarFormularioAlta(); }  
     );
   }
 
@@ -172,43 +244,33 @@ export class Repartos implements OnInit {
         descripcionReparto: this.repartoForm.value.descripcion || ''
       };
 
-      console.log('Enviando DTO de Reparto al Backend:', payload);
-
-      // Usando tu servicio inyectado
       this.repartosService.create(payload).subscribe({
         next: (respuesta) => {
           this.closeModal();
-          this.refresh$.next(); // Actualiza tu tabla al instante
-          
+          this.refresh$.next(); 
           setTimeout(() => {
-            alert('¡Reparto creado con éxito!');
+            this.mostrarAlerta('¡Reparto creado con éxito!', 'exito');
           }, 300);
         },
         error: (err) => {
-          console.error('Error al intentar crear el reparto:', err);
-          alert('Hubo un error al guardar el reparto. Revisa la consola.');
+          console.error('Error al crear el reparto:', err);
+          this.mostrarAlerta('Hubo un error al guardar el reparto.', 'error');
         }
       });
-
     } else {
       this.repartoForm.markAllAsTouched();
-      alert('Por favor, completa el nombre del reparto.');
+      this.mostrarAlerta('Por favor, completa el nombre del reparto.', 'error');
     }
   }
 
-  //Modal asignar pedido a reparto
-  
-  // 1. Abre el modal y carga los datos frescos
   abrirModalAsignacion(modalTemplate: any, idReparto: number) {
     this.repartoActivoId = idReparto;
-    this.pedidosSeleccionados.clear(); // Limpiamos selecciones anteriores
-    this.pedidosDisponibles = []; // Limpiamos la tabla
+    this.pedidosSeleccionados.clear(); 
+    this.pedidosDisponibles = []; 
     this.cargandoPedidos = true;
 
-    //Abrir modal con angular
     this.modalService.open(modalTemplate, { size: 'lg', centered: true, scrollable: true });
 
-    // Llamamos al servicio que creaste (Ajusta el nombre del método según tu servicio)
     this.pedidoService.getPedidosDisponibles().subscribe({
       next: (pedidos) => {
         this.pedidosDisponibles = pedidos;
@@ -221,54 +283,52 @@ export class Repartos implements OnInit {
     });
   }
 
-  // 2. Maneja el clic en cada checkbox
   toggleSeleccionPedido(idPedido: number) {
     if (this.pedidosSeleccionados.has(idPedido)) {
-      this.pedidosSeleccionados.delete(idPedido); // Si ya estaba, lo quitamos
+      this.pedidosSeleccionados.delete(idPedido);
     } else {
-      this.pedidosSeleccionados.add(idPedido);    // Si no estaba, lo agregamos
+      this.pedidosSeleccionados.add(idPedido);    
     }
   }
 
-  // 3. Envía los datos al backend
   guardarAsignacion() {
     if (this.pedidosSeleccionados.size === 0 || !this.repartoActivoId) {
-      alert('Debes seleccionar al menos un pedido.');
+      this.mostrarAlerta('Debes seleccionar al menos un pedido.', 'error');
       return;
     }
 
-    // Convertimos el Set a un Array normal para enviarlo en el JSON
     const pedidosIds = Array.from(this.pedidosSeleccionados);
 
-    // Llama a tu método del backend para asignar (Ajusta los nombres)
     this.repartosService.asignarPedidos(this.repartoActivoId, pedidosIds).subscribe({
       next: (res) => { 
-        this.closeModal(); // Asegura que el modal se cierre
-        // Recarga la tabla principal de repartos para actualizar los números
+        this.closeModal(); 
         this.refresh$.next();
-
-        // Alert con pequeño retraso para no bloquear la animación de cierre
-          setTimeout(() => {
-            alert('¡Pedidos asignados con éxito!');
-          }, 300);
+        setTimeout(() => {
+          this.mostrarAlerta('¡Pedidos asignados con éxito!', 'exito');
+        }, 300);
       },
       error: (err) => {
         console.error('Error al asignar', err);
-        alert('Hubo un error al asignar los pedidos.');
+        this.mostrarAlerta('Hubo un error al asignar los pedidos.', 'error');
       }
     });
   }
 
   // ==========================================
-  // 5. HELPERS
+  // HELPERS
   // ==========================================
-  onFilterChange(value: string) {
-    this.filterSubject.next(value ?? '');
+  cantidadPedidosActivos(reparto: Reparto | null): number {
+    if (!reparto || !reparto.pedidosList) return 0;
+    return reparto.pedidosList
+      .filter(p => p.estadoPedido?.nombreEstadoPedido !== 'CANCELADO')
+      .length;
   }
 
   totalReparto(reparto: Reparto | null): number {
-    if (!reparto) return 0;
-    return reparto.pedidosList.reduce((acc, p) => acc + (p.importeTotalPedido ?? 0), 0);
+    if (!reparto || !reparto.pedidosList) return 0;
+    return reparto.pedidosList
+      .filter(p => p.estadoPedido?.nombreEstadoPedido !== 'CANCELADO')
+      .reduce((acc, p) => acc + (p.importeTotalPedido ?? 0), 0);
   }
 
   totalPedido(p: any): number {

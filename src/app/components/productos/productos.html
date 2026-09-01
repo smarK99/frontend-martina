@@ -11,7 +11,8 @@
           <div class="dropdown-divider"></div>
           <button ngbDropdownItem (click)="cambiarVista('CATEGORIAS')">Categorías</button>
           <button ngbDropdownItem (click)="cambiarVista('INSUMOS')">Insumos</button>
-          <button ngbDropdownItem (click)="cambiarVista('PRECIOS_SUCURSAL')">Precios por Sucursal</button>
+          <!-- Opción unificada -->
+          <button ngbDropdownItem (click)="cambiarVista('SUCURSALES')">Sucursales y Precios</button>
         </div>
       </div>
 
@@ -41,8 +42,9 @@
           <app-insumos #insumosGestion></app-insumos>
         }
         
-        @case ('PRECIOS_SUCURSAL') {
-          <app-asignar-precios #preciosSucursal></app-asignar-precios>
+        @case ('SUCURSALES') {
+          <!-- Usamos el componente de precios, pero mapeado al #sucursalesGestion -->
+          <app-asignar-precios #sucursalesGestion></app-asignar-precios>
         }
       }
 

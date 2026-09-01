@@ -1,11 +1,24 @@
 <div class="card p-4 shadow-sm border-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0 text-secondary"><i class="bi bi-shop me-2"></i> Gestión de Precios por Sucursal</h5>
+        <h5 class="mb-0 text-secondary"><i class="bi bi-shop me-2"></i> Gestión de Sucursales y Precios</h5>
+        
+        <!-- NUEVO: Buscador de Sucursales -->
+        <div class="input-group" style="width: 250px;">
+            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" placeholder="Buscar sucursal..."
+                   #buscarInput (input)="filtrarSucursales(buscarInput.value)">
+        </div>
     </div>
 
     @if (cargando) {
         <div class="text-center py-5">
             <div class="spinner-border text-danger" role="status"></div>
+        </div>
+    <!-- NUEVO: Mensaje si no hay resultados en la búsqueda -->
+    } @else if (sucursalesFiltradas.length === 0) {
+        <div class="alert alert-info text-center py-4 mt-3">
+            <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+            No se encontraron sucursales que coincidan con la búsqueda.
         </div>
     } @else {
         <div class="table-responsive">
@@ -19,16 +32,24 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for (sucursal of sucursales; track sucursal.id) {
+                    <!-- NUEVO: Iteramos sobre sucursalesFiltradas -->
+                    @for (sucursal of sucursalesFiltradas; track sucursal.id) {
                     <tr>
                         <td class="text-muted fw-bold">#{{ sucursal.id }}</td>
                         <td class="fw-semibold">{{ sucursal.nombreSucursal }}</td>
                         <td class="text-muted">{{ sucursal.direccionSucursal }}</td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-danger" 
-                                    (click)="abrirModalPrecios(sucursal)">
-                                <i class="bi bi-currency-dollar"></i> Asignar Precios
-                            </button>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-sm btn-outline-success" title="Asignar Precios" (click)="abrirModalPrecios(sucursal)">
+                                    <i class="bi bi-currency-dollar"></i> Precios
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" title="Editar Sucursal" (click)="abrirModalEdicion(sucursal)">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" title="Eliminar Sucursal" (click)="abrirModalBaja(sucursal.id, confirmarBajaModal)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     }
@@ -38,6 +59,49 @@
     }
 </div>
 
+<!-- Modal: Crear/Editar Sucursal -->
+<ng-template #sucursalModal let-modal>
+    <div class="modal-header modal-header-red text-white">
+        <h5 class="modal-title fw-bold">
+            <i class="bi bi-shop me-2"></i>{{ isEditMode ? 'Editar Sucursal' : 'Nueva Sucursal' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+    </div>
+
+    <div class="modal-body p-4">
+        <form [formGroup]="sucursalForm">
+            <div class="mb-3">
+                <label class="form-label fw-bold small">Nombre de la Sucursal *</label>
+                <input type="text" class="form-control" formControlName="nombreSucursal" placeholder="Ej: Sucursal Centro">
+                @if (sucursalForm.get('nombreSucursal')?.invalid && sucursalForm.get('nombreSucursal')?.touched) {
+                    <div class="text-danger small mt-1">El nombre es obligatorio.</div>
+                }
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold small">Dirección *</label>
+                <input type="text" class="form-control" formControlName="direccionSucursal" placeholder="Ej: Av. San Martín 123">
+                @if (sucursalForm.get('direccionSucursal')?.invalid && sucursalForm.get('direccionSucursal')?.touched) {
+                    <div class="text-danger small mt-1">La dirección es obligatoria.</div>
+                }
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold small">Descripción (Opcional)</label>
+                <textarea class="form-control" formControlName="descripcionSucursal" rows="2" placeholder="Detalles adicionales..."></textarea>
+            </div>
+        </form>
+    </div>
+
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">Cancelar</button>
+        <button type="button" class="btn btn-danger" (click)="guardarSucursal()">
+            <i class="bi bi-save me-1"></i> {{ isEditMode ? 'Guardar Cambios' : 'Registrar Sucursal' }}
+        </button>
+    </div>
+</ng-template>
+
+<!-- Modal: Asignar Precios (Original ajustado) -->
 <ng-template #preciosModal let-modal>
     <div class="modal-header bg-danger text-white">
         <h5 class="modal-title">
@@ -85,4 +149,42 @@
             <i class="bi bi-save me-1"></i> Guardar Cambios
         </button>
     </div>
+</ng-template>
+
+<!-- Modal Confirmar Baja -->
+<ng-template #confirmarBajaModal let-modal>
+    <div class="modal-header bg-danger text-white border-0">
+      <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Eliminar Sucursal</h5>
+      <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="modal.dismiss()"></button>
+    </div>
+    
+    <div class="modal-body text-center py-4">
+      <i class="bi bi-shop text-danger mb-3 d-block" style="font-size: 3rem;"></i>
+      <p class="fs-5 mb-1">¿Estás seguro de que deseas eliminar esta sucursal?</p>
+    </div>
+    
+    <div class="modal-footer bg-light border-0 justify-content-center">
+      <button type="button" class="btn btn-outline-secondary px-4" (click)="modal.dismiss()">No, volver</button>
+      <button type="button" class="btn btn-danger px-4" (click)="confirmarBaja()">Sí, eliminar</button>
+    </div>
+</ng-template>
+  
+<!-- Modal de Alerta Genérica (Éxito / Error) -->
+<ng-template #alertaModal let-modal>
+    <div class="modal-body text-center py-4">
+      @if (tipoAlerta === 'exito') {
+        <i class="bi bi-check-circle-fill text-success d-block mb-3 animate__animated animate__bounceIn" style="font-size: 3.5rem;"></i>
+        <h5 class="fw-bold text-success">¡Éxito!</h5>
+      } @else {
+        <i class="bi bi-x-circle-fill text-danger d-block mb-3 animate__animated animate__shakeX" style="font-size: 3.5rem;"></i>
+        <h5 class="fw-bold text-danger">¡Error!</h5>
+      }
+      <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
+    </div>
+    
+    @if (tipoAlerta === 'error') {
+      <div class="modal-footer border-0 justify-content-center bg-light">
+        <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>
+      </div>
+    }
 </ng-template>
