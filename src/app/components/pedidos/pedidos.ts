@@ -1,11 +1,9 @@
 import { Component, inject, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { Observable, combineLatest, BehaviorSubject, switchMap, tap, catchError, of, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Observable, combineLatest, BehaviorSubject, switchMap, tap, catchError, of, debounceTime, distinctUntilChanged, map } from 'rxjs';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-
-// Servicios y Modelos
 import { AuthService } from '../../services/auth-service';
 import { PedidoService } from '../../services/pedido-service';
 import { Sucursal } from '../../model/pedido.model';
@@ -69,6 +67,7 @@ export class Pedidos implements OnInit {
   
   filtroSucursal$ = new BehaviorSubject<number | ''>(''); 
   filterSubject = new BehaviorSubject<string>(''); // Controla el texto del buscador
+  filter$ = this.filterSubject.asObservable(); // Alias para compatibilidad con la lógica reactiva previa
   dateFilterSubject = new BehaviorSubject<string>(''); // NUEVO: Controla la fecha
   estadoFilterSubject = new BehaviorSubject<number>(0); // NUEVO: Controla el estado
   

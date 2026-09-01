@@ -184,7 +184,6 @@ export class Repartos implements OnInit {
     this.dateFilterSubject.next(dateValue);
   }
 
-  // --- NUEVO: Evento para el selector de estado ---
   onEstadoFilterChange(estadoValue: string) {
     this.currentPage = 0;
     this.estadoFilterSubject.next(Number(estadoValue));
@@ -405,32 +404,6 @@ export class Repartos implements OnInit {
       error: (err) => alert("Error al registrar la entrega.")
     });
   }
-
-  // entregarPedido(pedidoId: number, repartoId: number, metodoPago: 'EFECTIVO' | 'TRANSFERENCIA') {
-  //   const payload = { idPedido: pedidoId, idReparto: repartoId, metodoPago };
-  //   console.log("Enviando entrega de pedido:", payload);
-  //   this.repartosService.entregarPedido(payload).subscribe({
-  //     next: () => {
-  //       this.refresh$.next();
-  //       setTimeout(() => alert("¡Pedido entregado con éxito!"), 300);
-
-  //       //Actualizacion automatica del estado del pedido en memoria para no tener que recargar la tabla
-  //       if (this.selectedReparto && this.selectedReparto.pedidosList) {
-  //         // Buscamos el pedido específico que acabamos de entregar
-  //         const pedidoLocal = this.selectedReparto.pedidosList.find((p: any) => p.id === pedidoId);
-  //         if (pedidoLocal) {
-  //           // Cambiamos su estado en memoria. 
-  //           pedidoLocal.estadoPedido.nombreEstadoPedido = 'ENTREGADO';
-  //         }
-      
-  //       }
-  //     },
-  //     error: (err) => {
-  //       console.error("Error al entregar pedido:", err);
-  //       alert("Hubo un error al entregar el pedido.");
-  //     }
-  //   });
-  // }
 
   // Abre el modal pasándole los datos del pedido
   abrirModalCobro(content: any, pedido: any) {
