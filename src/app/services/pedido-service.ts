@@ -33,7 +33,7 @@ export class PedidoService {
   }
 
   // ==========================================
-  // MÉTODOS DE PAGINACIÓN (Nuevos)
+  // MÉTODOS DE PAGINACIÓN 
   // ==========================================
   
   getAllPaged(page: number, size: number): Observable<any> {

@@ -501,4 +501,10 @@ export class Pedidos implements OnInit {
     }
   }
 
+  // ==============================================
+  // 9. IMPRESIÓN DE BOLETA DE PEDIDO
+  // ==============================================
+  imprimirBoleta() {
+    window.print();
+  }
 }

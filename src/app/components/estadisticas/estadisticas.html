@@ -9,16 +9,16 @@
             <div class="col-md-3">
                 <div class="card p-3 stat-card shadow-sm border-0">
                     <div class="small text-muted"><i class="bi bi-bar-chart"></i> Ventas últimos 30 días</div>
-                    <div class="h5 fw-bold text-success mt-1"> {{ ventasUltimos30Dias | currency:'ARS' }} </div>
+                    <div class="h5 fw-bold text-success mt-1"> {{ ventasUltimos30Dias | currency:'ARS':'$ ':'1.2-2'  }} </div>
                     <div class="small text-muted">Pedidos: {{ pedidosUltimos30Dias }}</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card p-3 stat-card shadow-sm border-0">
                     <div class="small text-muted"><i class="bi bi-cash-stack"></i> Ventas últimos 7 días</div>
-                    <div class="h5 fw-bold text-success mt-1"> {{ ventasUltimos7Dias | currency:'ARS' }} </div>
+                    <div class="h5 fw-bold text-success mt-1"> {{ ventasUltimos7Dias | currency:'ARS':'$ ':'1.2-2'  }} </div>
                     <div class="small text-muted">Ticket promedio: <span class="text-success">{{ ticketPromedio30Dias |
-                            currency:'ARS' }}</span></div>
+                            currency:'ARS':'$ ':'1.2-2'  }}</span></div>
                 </div>
             </div>
             <div class="col-md-3">
@@ -34,7 +34,7 @@
                 <div class="card p-3 stat-card shadow-sm border-0">
                     <div class="small text-muted"> <i class="bi bi-receipt-cutoff"></i> Top 3 — total</div>
                     <div class="h5 fw-bold text-success mt-1">
-                        {{ top3Total | currency:'ARS' }}
+                        {{ top3Total | currency:'ARS':'$ ':'1.2-2'  }}
                     </div>
                     <div class="small text-muted">Productos distinguidos</div>
                 </div>
@@ -73,7 +73,7 @@
                                     <td class="ps-3 fw-bold text-muted">{{ s.rank }}</td>
                                     <td>{{ s.nombreSucursal }}</td>
                                     <td class="text-end pe-3 text-success fw-bold">
-                                        {{ s.montoTotal | currency:'ARS' }}
+                                        {{ s.montoTotal | currency:'ARS':'$ ':'1.2-2'  }}
                                     </td>
                                 </tr>
                                 } @empty {
@@ -115,7 +115,7 @@
                                     <td class="ps-2 fw-bold text-muted">{{ p.rank }}</td>
                                     <td>{{ p.nombre }}</td>
                                     <td class="text-end fw-bold">{{ p.cantidad }}</td>
-                                    <td class="text-end pe-2 text-success fw-bold">{{ p.monto | currency:'ARS' }}</td>
+                                    <td class="text-end pe-2 text-success fw-bold">{{ p.monto | currency:'ARS':'$ ':'1.2-2'  }}</td>
                                 </tr>
                                 }
                             </tbody>

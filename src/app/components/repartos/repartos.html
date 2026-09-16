@@ -2,16 +2,9 @@
 @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_REPARTIDOR') {
 
 <app-action-bar title="Gestión de Repartos">
-  @if (role === 'ROLE_REPARTIDOR') {
-  <button class="btn btn-outline-secondary d-flex align-items-center gap-2">
-    <i class="bi bi-truck"></i> Mis Repartos
-  </button>
-  }
-  @if (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO') {
   <button class="btn btn-danger d-flex align-items-center gap-2" (click)="openModal(altaRepartoModal)">
     <i class="bi bi-plus-lg"></i> Nuevo Reparto
   </button>
-  }
 </app-action-bar>
 
     <section class="py-4">
@@ -78,9 +71,9 @@
                         }">{{ r.estadoReparto.nombreEstadoReparto }}</span>
                       </td>
                       <td>{{ cantidadPedidosActivos(r) }}</td>
-                      <td>{{ totalReparto(r) | currency:'ARS' }}</td>
+                      <td>{{ totalReparto(r) | currency:'ARS':'$ ':'1.2-2'  }}</td>
                       <td class="text-end">
-                        @if (r.estadoReparto.nombreEstadoReparto !== 'FINALIZADO' && (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO')) {  
+                        @if (r.estadoReparto.nombreEstadoReparto !== 'FINALIZADO' && (role === 'ROLE_ADMIN' || role === 'ROLE_DUENIO' || role === 'ROLE_REPARTIDOR')) {  
                           <button class="btn btn-sm btn-outline-success me-2" (click)="abrirModalAsignacion(asignarPedidosModal, r.id)">
                             <i class="bi bi-truck"></i> +
                           </button>
@@ -137,7 +130,9 @@
   <div class="modal-body">
     @if (selectedReparto; as rep) {
     <p class="mb-1"><strong>Inicio:</strong> {{ rep.fechaHoraInicioReparto | date:'full' }}</p>
+    <p class="mb-1"><strong>Fin:</strong> {{ rep.fechaHoraFinReparto | date:'full' }}</p>
     <p class="mb-2"><strong>Estado:</strong> {{ rep.estadoReparto.nombreEstadoReparto }}</p>
+    <p class="mb-2"><strong>Descripcion:</strong> {{ rep.descripcionReparto }}</p>
 
     <h6 class="mt-3">Pedidos en este reparto</h6>
     <div class="table-responsive">
@@ -158,7 +153,7 @@
             <td>{{ p.id }}</td>
             <td>{{ p.fechaHoraEntregaPedido | date:'short' }}</td>
             <td>{{ p.sucursal.nombreSucursal }}</td>
-            <td class="text-end">{{ p.importeTotalPedido | currency:'ARS' }}</td>
+            <td class="text-end">{{ p.importeTotalPedido | currency:'ARS':'$ ':'1.2-2'  }}</td>
             <td class="text-center"><span class="badge bg-light text-dark">{{ p.estadoPedido.nombreEstadoPedido
                 }}</span></td>
             <td class="text-end">
@@ -178,7 +173,7 @@
         <tfoot>
           <tr class="table-active">
             <td colspan="3" class="text-end fw-bold">TOTAL REPARTO</td>
-            <td class="text-end fw-bold">{{ totalReparto(rep) | currency:'ARS' }}</td>
+            <td class="text-end fw-bold">{{ totalReparto(rep) | currency:'ARS':'$ ':'1.2-2'  }}</td>
             <td colspan="2"></td>
           </tr>
         </tfoot>
@@ -201,13 +196,13 @@
             <!-- Lo que pide el sistema -->
             <div class="col-4 border-end">
               <span class="d-block small text-muted">Sistema (Esperado)</span>
-              <strong class="fs-5">{{ rep.rendicion.montoRecaudado | currency:'ARS' }}</strong>
+              <strong class="fs-5">{{ rep.rendicion.montoRecaudado | currency:'ARS':'$ ':'1.2-2'  }}</strong>
             </div>
 
             <!-- Lo que entregó el repartidor -->
             <div class="col-4 border-end">
               <span class="d-block small text-muted">Repartidor (Entregado)</span>
-              <strong class="fs-5">{{ rep.rendicion.montoRendido | currency:'ARS' }}</strong>
+              <strong class="fs-5">{{ rep.rendicion.montoRendido | currency:'ARS':'$ ':'1.2-2'  }}</strong>
             </div>
 
             <!-- La Diferencia (Faltante / Sobrante / Exacto) -->
@@ -216,7 +211,7 @@
               <strong class="fs-5" [class.text-danger]="rep.rendicion.diferencia < 0"
                 [class.text-success]="rep.rendicion.diferencia >= 0">
 
-                {{ rep.rendicion.diferencia | currency:'ARS' }}
+                {{ rep.rendicion.diferencia | currency:'ARS':'$ ':'1.2-2'  }}
 
                 <span class="badge rounded-pill ms-1 align-top" [class.bg-danger]="rep.rendicion.diferencia < 0"
                   [class.bg-success]="rep.rendicion.diferencia >= 0">
@@ -361,7 +356,7 @@
             <td class="fw-bold">#{{ p.id }}</td>
             <td>{{ p.sucursal?.nombreSucursal }}</td>
             <td class="text-muted small">{{ p.sucursal?.direccionSucursal || 'Retira en local' }}</td>
-            <td class="text-end pe-4">{{ p.importeTotalPedido | currency:'ARS' }}</td>
+            <td class="text-end pe-4">{{ p.importeTotalPedido | currency:'ARS':'$ ':'1.2-2'  }}</td>
           </tr>
           }
         </tbody>
@@ -449,7 +444,7 @@
   </div>
   <div class="modal-body">
     <div class="alert alert-info py-2">
-      Total a cobrar: <strong>{{ pedidoParaCobrar?.importeTotalPedido | currency:'ARS' }}</strong>
+      Total a cobrar: <strong>{{ pedidoParaCobrar?.importeTotalPedido | currency:'ARS':'$ ':'1.2-2'  }}</strong>
     </div>
     
     <form [formGroup]="cobroForm">

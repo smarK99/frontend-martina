@@ -6,13 +6,6 @@ export interface Categoria {
   fechaHoraBajaCategoria?: string | null;
 }
 
-// export interface UnidadMedida {
-//   id?: number;
-//   nombreUnidadMedida: string;
-//   fechaHoraAltaUnidadMedida?: string;
-//   fechaHoraBajaUnidadMedida?: string | null;
-// }
-
 export interface Insumo {
   id?: number;
   nombreInsumo: string;

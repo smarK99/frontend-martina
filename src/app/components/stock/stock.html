@@ -61,7 +61,7 @@
                       <td class="ps-3 fw-medium">{{ c.id }}</td>
                       <td class="text-muted">{{ c.fechaHoraAltaConteoStock | date: "short" }}</td>
                       <td>{{ c.usuario.nombreCompletoUsuario }}</td>
-                      <td class="fw-semibold text-success">{{ totalValue(c) | currency:'ARS' }}</td>
+                      <td class="fw-semibold text-success">{{ totalValue(c) | currency:'ARS':'$ ':'1.2-2'  }}</td>
                       <td class="pe-3">
                         <div class="d-flex justify-content-end gap-2">
                           <button class="btn btn-sm btn-outline-primary" (click)="openDetailsModal(detailModal, c)">
@@ -144,9 +144,9 @@
           <tr>
             <td class="text-center">{{ it.cantidadStockProducto }}</td>
             <td><span class="badge bg-secondary me-2">Prod</span> {{ it.producto.nombreProducto }}</td>
-            <td class="text-end">{{ obtenerPrecioProducto(it.producto) | currency }}</td>
+            <td class="text-end">{{ obtenerPrecioProducto(it.producto) | currency:'ARS':'$ ':'1.2-2'  }}</td>
             <td class="text-end fw-medium text-success">
-              {{ (it.cantidadStockProducto * obtenerPrecioProducto(it.producto)) | currency }}
+              {{ (it.cantidadStockProducto * obtenerPrecioProducto(it.producto)) | currency:'ARS':'$ ':'1.2-2'  }}
             </td>
           </tr>
           }
@@ -157,10 +157,10 @@
             <td class="text-center">{{ ins.cantidadStockInsumo }}</td>
             <td><span class="badge bg-light text-dark border me-2">Ins</span> {{ ins.insumo.nombreInsumo }}</td>
             <td class="text-end">
-              {{ ins.insumo.precioCompraInsumo | currency }}
+              {{ ins.insumo.precioCompraInsumo | currency:'ARS':'$ ':'1.2-2'  }}
             </td>
             <td class="text-end fw-medium text-success">
-              {{ ins.cantidadStockInsumo * ins.insumo.precioCompraInsumo | currency }}
+              {{ ins.cantidadStockInsumo * ins.insumo.precioCompraInsumo | currency:'ARS':'$ ':'1.2-2'  }}
             </td>
           </tr>
           }
@@ -171,7 +171,7 @@
             <td colspan="2" class="text-center fw-bold">VALOR TOTAL STOCK</td>
             <td class="text-end"></td>
             <td class="text-end fw-bold">
-              {{ totalValue(sc) | currency:'ARS' }}
+              {{ totalValue(sc) | currency:'ARS':'$ ':'1.2-2'}}
             </td>
           </tr>
         </tfoot>

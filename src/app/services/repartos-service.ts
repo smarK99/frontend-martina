@@ -42,7 +42,7 @@ export class RepartosService {
     return this.http.post(`${this.baseUrl}/realizar_rendicion`, rendicionDTO);
   }
 
-  // --- NUEVO MÉTODO: Paginación y Búsqueda ---
+  // --- Paginación y Búsqueda ---
   buscarPaginadoYFiltrado(termino: string, idRepartidor: number, fecha: string, idEstado: number, page: number, size: number): Observable<any> {
     const params = new HttpParams()
       .set('termino', termino)

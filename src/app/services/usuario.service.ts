@@ -53,7 +53,6 @@ export class UsuarioService {
   }
 
   cambiarClavePersonal(datos: any): Observable<any> {
-    // Apuntamos al endpoint que acabamos de crear en Java
     return this.http.post(`${this.apiURL}/cambiar-clave`, datos); 
   }
  
