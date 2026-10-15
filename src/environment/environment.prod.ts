@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://tu-backend-produccion.com/api',
+  apiUrl: 'https://congenial-theatrics-component.ngrok-free.dev/',
   debug: false,
   logLevel: 'error'
 };
