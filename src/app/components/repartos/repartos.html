@@ -455,21 +455,23 @@
         </label>
         <div class="input-group">
           <span class="input-group-text bg-light">$</span>
-          <input type="number" class="form-control border-success" formControlName="montoEfectivo">
+          <!-- Agregamos el evento (input) para que calcule la deuda automáticamente -->
+          <input type="number" class="form-control border-success" formControlName="montoEfectivo" (input)="calcularDeuda()">
         </div>
         <small class="text-muted">Impacta en la Rendición de Caja del Reparto.</small>
       </div>
 
-      <!-- Input Transferencia -->
+      <!-- Input Transferencia / Deuda -->
       <div class="mb-3">
         <label class="form-label text-info fw-bold">
-          <i class="bi bi-phone me-1"></i> Cobrado por Transferencia
+          <i class="bi bi-clock-history me-1"></i> A Pagar (Transferencia / Cta. Cte.)
         </label>
         <div class="input-group">
           <span class="input-group-text bg-light">$</span>
-          <input type="number" class="form-control border-info" formControlName="montoTransferencia">
+          <!-- Lo ponemos como readonly para que el repartidor no tenga que hacer cálculos mentales -->
+          <input type="number" class="form-control border-info bg-light" formControlName="montoTransferencia" readonly>
         </div>
-        <small class="text-muted">No suma efectivo físico a la caja.</small>
+        <small class="text-danger">Quedará como deuda en el historial hasta que el Dueño verifique el pago.</small>
       </div>
     </form>
   </div>

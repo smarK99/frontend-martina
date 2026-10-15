@@ -419,6 +419,24 @@ export class Repartos implements OnInit {
     this.modalService.open(content, { centered: true });
   }
 
+    // --- NUEVA LÓGICA DE AUTO-CÁLCULO ---
+    calcularDeuda() {
+    const totalPedido = this.pedidoParaCobrar?.importeTotalPedido || 0;
+    const efectivoIngresado = this.cobroForm.get('montoEfectivo')?.value || 0;
+    
+    let resto = totalPedido - efectivoIngresado;
+    
+    // Evitamos números negativos por si el repartidor tipea mal
+    if (resto < 0) {
+      resto = 0;
+    }
+
+    // Actualizamos el campo de transferencia/deuda automáticamente
+    this.cobroForm.patchValue({
+      montoTransferencia: resto
+    });
+  }
+
   // --- LÓGICA PARA FINALIZAR REPARTO ---
   finalizarReparto(repartoId: number) {
 
