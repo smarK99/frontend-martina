@@ -8,7 +8,7 @@ export const environment = {
 
 export const environmentProd = {
   production: true,
-  apiUrl: 'https://congenial-theatrics-component.ngrok-free.dev/', // URL de producción
+  apiUrl: 'https://congenial-theatrics-component.ngrok-free.dev/api', // URL de producción
   debug: false,
   logLevel: 'error'
 };

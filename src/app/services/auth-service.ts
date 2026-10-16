@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { JwtDto } from '../model/jwt-dto'; 
 import { LoginUsuario } from '../model/login-usuario';
+import { environment } from '../../environment/environment';
 
 export type Role = 'ROLE_ADMIN' | 'ROLE_DUENIO' | 'ROLE_STOCK' | 'ROLE_EMPLEADO' | 'ROLE_REPARTIDOR' | 'ROLE_CLIENTE' | null;
 
@@ -14,7 +15,7 @@ export type Role = 'ROLE_ADMIN' | 'ROLE_DUENIO' | 'ROLE_STOCK' | 'ROLE_EMPLEADO'
 })
 export class AuthService {
   
-  private authURL = 'http://localhost:8080/api/auth/';
+  private authURL = `${environment.apiUrl}/auth/`;
 
   private roleSubject: BehaviorSubject<Role>;
   role$: Observable<Role>;
