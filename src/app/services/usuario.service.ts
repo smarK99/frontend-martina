@@ -1,23 +1,22 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http'; // <-- Agregamos HttpParams
 import { Observable } from 'rxjs';
+import { environment } from '../../environment/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UsuarioService {
   
-  private http = inject(HttpClient);
-  // URL base de tu backend para el controlador de usuarios
-  private apiURL = 'http://localhost:8080/api/usuarios'; 
+  private baseUrl = `${environment.apiUrl}/usuario`;
 
-  constructor() { }
+  constructor(private http: HttpClient) { }
 
   /**
    * Obtiene la lista de todos los usuarios activos
    */
   getAll(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiURL);
+    return this.http.get<any[]>(this.baseUrl);
   }
 
   /**
@@ -25,7 +24,7 @@ export class UsuarioService {
    * Envía las credenciales y datos personales para crear un nuevo registro
    */
   create(payloadAlta: any): Observable<any> {
-    return this.http.post<any>(`${this.apiURL}/crear`, payloadAlta);
+    return this.http.post<any>(`${this.baseUrl}/crear`, payloadAlta);
   }
 
   /**
@@ -33,7 +32,7 @@ export class UsuarioService {
    * Actualiza los datos permitidos del usuario según su ID
    */
   update(payloadModificacion: any): Observable<any> {
-    return this.http.put<any>(`${this.apiURL}/actualizar`, payloadModificacion);
+    return this.http.put<any>(`${this.baseUrl}/actualizar`, payloadModificacion);
   }
 
   /**
@@ -41,7 +40,7 @@ export class UsuarioService {
    * Registra la fechaHoraBajaUsuario en el backend
    */
   baja(payloadBaja: any): Observable<any> {
-    return this.http.put<any>(`${this.apiURL}/baja`, payloadBaja);
+    return this.http.put<any>(`${this.baseUrl}/baja`, payloadBaja);
   }
 
   /**
@@ -49,22 +48,22 @@ export class UsuarioService {
    * Envía el listado consolidado de roles (ROLE_XYZ) para impactar en la tabla intermedia
    */
   actualizarRoles(payloadRoles: any): Observable<any> {
-    return this.http.put<any>(`${this.apiURL}/roles`, payloadRoles);
+    return this.http.put<any>(`${this.baseUrl}/roles`, payloadRoles);
   }
 
   cambiarClavePersonal(datos: any): Observable<any> {
-    return this.http.post(`${this.apiURL}/cambiar-clave`, datos); 
+    return this.http.post(`${this.baseUrl}/cambiar-clave`, datos); 
   }
  
   /**
    * Envía el email al backend para solicitar el link de recuperación de clave
    */
   solicitarRecuperacionClave(email: string): Observable<any> {
-    return this.http.post(`${this.apiURL}/recuperar-clave`, { email });
+    return this.http.post(`${this.baseUrl}/recuperar-clave`, { email });
   }
 
   restablecerClaveConToken(token: string, nuevaClave: string): Observable<any> {
-    return this.http.post(`${this.apiURL}/reset-password`, { token, nuevaClave });
+    return this.http.post(`${this.baseUrl}/reset-password`, { token, nuevaClave });
   }
 
   // ==========================================
@@ -76,7 +75,7 @@ export class UsuarioService {
       .set('page', page.toString())
       .set('size', size.toString());
     
-    return this.http.get<any>(`${this.apiURL}/busqueda-paginada`, { params });
+    return this.http.get<any>(`${this.baseUrl}/busqueda-paginada`, { params });
   }
 
 }
