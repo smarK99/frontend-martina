@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://congenial-theatrics-component.ngrok-free.dev/api',
+  apiUrl: 'https://martina-backend.onrender.com/api',
   debug: false,
   logLevel: 'error'
 };

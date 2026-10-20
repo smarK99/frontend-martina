@@ -136,10 +136,11 @@ export class AsignarPrecios implements OnInit {
       return;
     }
 
-    // Armamos el DTO (simulamos idUsuario: 1 por defecto, podés ajustarlo a tu lógica de sesión)
+    // Armamos el DTO (simulamos idUsuario: 2 por defecto, podés ajustarlo a tu lógica de sesión) 
+    //ESTO DEL USUARIO LOGUEADO DEBERÍA VENIR DE UN SERVICIO DE AUTENTICACIÓN, NO ESTAR HARDCODEADO
     const payload = {
       ...this.sucursalForm.value,
-      idUsuario: 1 
+      idUsuario: 2 // Simulación de usuario logueado, reemplazar según tu lógica de autenticación 
     };
 
     if (this.isEditMode && this.sucursalSeleccionadaId) {

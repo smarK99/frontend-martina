@@ -8,7 +8,10 @@ export const environment = {
 
 export const environmentProd = {
   production: true,
-  apiUrl: 'https://congenial-theatrics-component.ngrok-free.dev/api', // URL de producción
+  apiUrl: 'https://martina-backend.onrender.com/api', // URL de producción
   debug: false,
   logLevel: 'error'
 };
+
+//URL PRODUCCION NGROK
+//'https://congenial-theatrics-component.ngrok-free.dev/api'

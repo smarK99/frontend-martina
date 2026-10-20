@@ -211,7 +211,7 @@
               <td class="ps-3 align-middle">{{ item.nombreProducto }}</td>
               <td class="text-center align-middle fw-bold">{{ item.cantidad }}</td>
               <td class="text-end align-middle pe-3">
-                {{ item.cantidad * item.precioUnitario | currency }}
+                {{ item.cantidad * item.precioUnitario | currency:'ARS':'$ ':'1.2-2' }}
               </td>
               <td class="text-end">
                 <button class="btn btn-link text-danger p-0" (click)="eliminarItem($index)">
@@ -224,7 +224,7 @@
           <tfoot class="table-group-divider">
             <tr class="bg-light fw-bold">
               <td colspan="2" class="text-end">TOTAL:</td>
-              <td class="text-end pe-3 text-danger">{{ totalEstimado | currency }}</td>
+              <td class="text-end pe-3 text-danger">{{ totalEstimado | currency:'ARS':'$ ':'1.2-2' }}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -524,3 +524,22 @@
   </div>
 </div>
 }
+
+<!-- Modal de Alerta Genérica (Éxito / Error) -->
+<ng-template #alertaModal let-modal>
+  <div class="modal-body text-center py-4">
+    @if (tipoAlerta === 'exito') {
+      <i class="bi bi-check-circle-fill text-success d-block mb-3 animate__animated animate__bounceIn" style="font-size: 3.5rem;"></i>
+      <h5 class="fw-bold text-success">¡Éxito!</h5>
+    } @else {
+      <i class="bi bi-x-circle-fill text-danger d-block mb-3 animate__animated animate__shakeX" style="font-size: 3.5rem;"></i>
+      <h5 class="fw-bold text-danger">¡Error!</h5>
+    }
+    <p class="fs-6 mb-0 text-muted">{{ mensajeAlerta }}</p>
+  </div>
+  @if (tipoAlerta === 'error') {
+    <div class="modal-footer border-0 justify-content-center bg-light">
+      <button class="btn btn-secondary px-4" (click)="modal.dismiss()">Entendido</button>
+    </div>
+  }
+</ng-template>
